@@ -6,6 +6,7 @@ const id = z
   .trim()
   .regex(/^[A-Za-z0-9_-]{1,32}$/, '英数字・_・- のみ、32文字以内')
 const name = z.string().trim().max(64)
+const email = z.email().trim().toLowerCase()
 const password = z.string().min(8, '8文字以上').max(128)
 
 export const seatStatuses = [
@@ -16,7 +17,7 @@ export const seatStatuses = [
 ] as const
 export type SeatStatus = (typeof seatStatuses)[number]
 
-export const adminCreateSchema = z.object({ email: z.email(), name, password })
+export const adminCreateSchema = z.object({ email, name, password })
 // Empty password on update keeps the current one.
 export const adminUpdateSchema = adminCreateSchema.extend({
   password: z.union([z.literal(''), password]).optional(),
@@ -65,6 +66,10 @@ export const occupancyPayloadSchema = z.object({
 })
 
 export const loginSchema = z.object({
-  email: z.email(),
+  email,
   password: z.string().min(1).max(128),
+})
+
+export const idsSchema = z.object({
+  ids: z.array(z.number().int()).min(1).max(1000),
 })
