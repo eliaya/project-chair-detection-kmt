@@ -26,10 +26,13 @@ export const seatStatuses = [
 export type SeatStatus = (typeof seatStatuses)[number]
 
 export const adminCreateSchema = z.object({ email, name, password })
+export const siteNameSchema = z.object({
+  site_name: name.min(1, 'サイト名を入力してください'),
+})
 // First admin from the web setup wizard; setup_code must match the SETUP_TOKEN secret.
 export const setupSchema = adminCreateSchema.extend({
   setup_code: z.string().min(1, 'Setup code を入力してください').max(256),
-  site_name: name.min(1, 'サイト名を入力してください'),
+  ...siteNameSchema.shape,
 })
 // Empty password on update keeps the current one.
 export const adminUpdateSchema = adminCreateSchema.extend({

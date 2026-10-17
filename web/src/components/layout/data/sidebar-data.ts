@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   SquareDashed,
+  Store,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -32,6 +33,7 @@ export const sidebarData: SidebarData = {
     {
       title: '管理',
       items: [
+        { title: 'サイト', url: '/site', icon: Store },
         { title: '管理者', url: '/admins', icon: ShieldCheck },
         { title: '外観', url: '/settings/appearance', icon: Palette },
         { title: '表示', url: '/settings/display', icon: Monitor },

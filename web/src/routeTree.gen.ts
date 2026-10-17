@@ -27,6 +27,7 @@ import { Route as AuthenticatedHistoryIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
+import { Route as AuthenticatedSiteIndexRouteImport } from './routes/_authenticated/site/index'
 import { Route as AuthenticatedThresholdsIndexRouteImport } from './routes/_authenticated/thresholds/index'
 import { Route as AuthenticatedZonesIndexRouteImport } from './routes/_authenticated/zones/index'
 
@@ -128,6 +129,11 @@ const AuthenticatedSettingsDisplayRoute =
     path: '/display',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedSiteIndexRoute = AuthenticatedSiteIndexRouteImport.update({
+  id: '/site/',
+  path: '/site/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedThresholdsIndexRoute =
   AuthenticatedThresholdsIndexRouteImport.update({
     id: '/thresholds/',
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/devices/': typeof AuthenticatedDevicesIndexRoute
   '/history/': typeof AuthenticatedHistoryIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/site/': typeof AuthenticatedSiteIndexRoute
   '/thresholds/': typeof AuthenticatedThresholdsIndexRoute
   '/zones/': typeof AuthenticatedZonesIndexRoute
 }
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/devices': typeof AuthenticatedDevicesIndexRoute
   '/history': typeof AuthenticatedHistoryIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
+  '/site': typeof AuthenticatedSiteIndexRoute
   '/thresholds': typeof AuthenticatedThresholdsIndexRoute
   '/zones': typeof AuthenticatedZonesIndexRoute
 }
@@ -201,6 +209,7 @@ export interface FileRoutesById {
   '/_authenticated/devices/': typeof AuthenticatedDevicesIndexRoute
   '/_authenticated/history/': typeof AuthenticatedHistoryIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/_authenticated/site/': typeof AuthenticatedSiteIndexRoute
   '/_authenticated/thresholds/': typeof AuthenticatedThresholdsIndexRoute
   '/_authenticated/zones/': typeof AuthenticatedZonesIndexRoute
 }
@@ -224,6 +233,7 @@ export interface FileRouteTypes {
     | '/devices/'
     | '/history/'
     | '/settings/'
+    | '/site/'
     | '/thresholds/'
     | '/zones/'
   fileRoutesByTo: FileRoutesByTo
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
     | '/devices'
     | '/history'
     | '/settings'
+    | '/site'
     | '/thresholds'
     | '/zones'
   id:
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/_authenticated/devices/'
     | '/_authenticated/history/'
     | '/_authenticated/settings/'
+    | '/_authenticated/site/'
     | '/_authenticated/thresholds/'
     | '/_authenticated/zones/'
   fileRoutesById: FileRoutesById
@@ -409,6 +421,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsDisplayRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/site/': {
+      id: '/_authenticated/site/'
+      path: '/site'
+      fullPath: '/site/'
+      preLoaderRoute: typeof AuthenticatedSiteIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/thresholds/': {
       id: '/_authenticated/thresholds/'
       path: '/thresholds'
@@ -452,6 +471,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCamerasIndexRoute: typeof AuthenticatedCamerasIndexRoute
   AuthenticatedDevicesIndexRoute: typeof AuthenticatedDevicesIndexRoute
   AuthenticatedHistoryIndexRoute: typeof AuthenticatedHistoryIndexRoute
+  AuthenticatedSiteIndexRoute: typeof AuthenticatedSiteIndexRoute
   AuthenticatedThresholdsIndexRoute: typeof AuthenticatedThresholdsIndexRoute
   AuthenticatedZonesIndexRoute: typeof AuthenticatedZonesIndexRoute
 }
@@ -464,6 +484,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCamerasIndexRoute: AuthenticatedCamerasIndexRoute,
   AuthenticatedDevicesIndexRoute: AuthenticatedDevicesIndexRoute,
   AuthenticatedHistoryIndexRoute: AuthenticatedHistoryIndexRoute,
+  AuthenticatedSiteIndexRoute: AuthenticatedSiteIndexRoute,
   AuthenticatedThresholdsIndexRoute: AuthenticatedThresholdsIndexRoute,
   AuthenticatedZonesIndexRoute: AuthenticatedZonesIndexRoute,
 }

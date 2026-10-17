@@ -8,6 +8,7 @@ import {
   loginSchema,
   occupancyPayloadSchema,
   setupSchema,
+  siteNameSchema,
   thresholdsSchema,
   zoneSchema,
 } from '../shared/schemas'
@@ -138,11 +139,7 @@ async function setup(req: Request, env: Env) {
     if (!row)
       throw new HttpError(409, '初期設定は完了しています。ログインしてください')
     // Only the request that created the admin gets here, so a losing race cannot rename the site.
-    await env.DB.prepare(
-      "INSERT INTO settings (key, value) VALUES ('site_name', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value"
-    )
-      .bind(JSON.stringify(d.site_name))
-      .run()
+    await saveSiteName(env, d.site_name)
     const token = await signSession(row.id, env.SESSION_SECRET, SESSION_TTL_S)
     return json(row, 201, { 'Set-Cookie': sessionCookie(token, SESSION_TTL_S) })
   }
@@ -323,6 +320,28 @@ async function thresholds(req: Request, env: Env) {
   throw new HttpError(404, 'Not Found')
 }
 
+const saveSiteName = (env: Env, siteName: string) =>
+  env.DB.prepare(
+    "INSERT INTO settings (key, value) VALUES ('site_name', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value"
+  )
+    .bind(JSON.stringify(siteName))
+    .run()
+
+async function siteName(req: Request, env: Env) {
+  if (req.method === 'GET') {
+    const v = await env.DB.prepare(
+      "SELECT value FROM settings WHERE key = 'site_name'"
+    ).first<string>('value')
+    return json({ site_name: v ? JSON.parse(v) : null })
+  }
+  if (req.method === 'PUT') {
+    const d = await body(req, siteNameSchema)
+    await saveSiteName(env, d.site_name)
+    return json(d)
+  }
+  throw new HttpError(404, 'Not Found')
+}
+
 async function occupancy(req: Request, env: Env, url: URL, sub?: string) {
   if (sub === 'current' && req.method === 'GET') {
     const [seats, devs] = await env.DB.batch([
@@ -448,12 +467,8 @@ async function route(req: Request, env: Env) {
     return crud(req, env, res, id)
   if (res === 'settings' && id === 'thresholds' && !action)
     return thresholds(req, env)
-  if (res === 'settings' && id === 'site_name' && !action && req.method === 'GET') {
-    const v = await env.DB.prepare(
-      "SELECT value FROM settings WHERE key = 'site_name'"
-    ).first<string>('value')
-    return json({ site_name: v ? JSON.parse(v) : null })
-  }
+  if (res === 'settings' && id === 'site_name' && !action)
+    return siteName(req, env)
   if (res === 'occupancy' && !action) return occupancy(req, env, url, id)
   throw new HttpError(404, 'Not Found')
 }

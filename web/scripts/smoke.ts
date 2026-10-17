@@ -49,7 +49,6 @@ if (process.env.SMOKE_SETUP_CODE)
     (await call('POST', '/api/setup', { ...firstAdmin, setup_code: process.env.SMOKE_SETUP_CODE })).status,
     409
   )
-assert.equal((await call('GET', '/api/settings/site_name')).status, 200)
 step('setup endpoint: wrong code rejected, closed after the first admin')
 
 const dev = await call('POST', '/api/devices', { id: 'smoke-pi', name: 'Smoke' })
@@ -103,6 +102,12 @@ const th = (await call('GET', '/api/settings/thresholds')).data
 assert.equal((await call('PUT', '/api/settings/thresholds', { ...th, confirm_frames: 0 })).status, 400)
 assert.deepEqual((await call('PUT', '/api/settings/thresholds', th)).data, th)
 step('thresholds read / validate / write')
+
+// Writes back the current name only, so a database without one stays untouched.
+const { site_name } = (await call('GET', '/api/settings/site_name')).data
+assert.equal((await call('PUT', '/api/settings/site_name', { site_name: ' ' })).status, 400)
+if (site_name) assert.deepEqual((await call('PUT', '/api/settings/site_name', { site_name })).data, { site_name })
+step('site name read / validate / write')
 
 const a = await call('POST', '/api/admins', { email: 'smoke@example.com', name: 'S', password: 'smoke-pass-123' })
 assert.equal(a.status, 201)
