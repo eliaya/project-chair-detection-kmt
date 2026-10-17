@@ -36,6 +36,21 @@ const me = (await call('GET', '/api/auth/me')).data
 assert.equal(me.email, email.toLowerCase())
 step('login, wrong password rejected')
 
+// Setup is closed once an admin exists (SMOKE_SETUP_CODE = the SETUP_TOKEN, optional).
+const setupStatus = (await call('GET', '/api/setup')).data
+assert.equal(setupStatus.needsAdmin, false)
+const firstAdmin = { email: 'late@example.com', name: '', password: 'smoke-pass-123' }
+assert.equal(
+  (await call('POST', '/api/setup', { ...firstAdmin, setup_code: 'wrong' })).status,
+  setupStatus.enabled ? 401 : 403
+)
+if (process.env.SMOKE_SETUP_CODE)
+  assert.equal(
+    (await call('POST', '/api/setup', { ...firstAdmin, setup_code: process.env.SMOKE_SETUP_CODE })).status,
+    409
+  )
+step('setup endpoint: wrong code rejected, closed after the first admin')
+
 const dev = await call('POST', '/api/devices', { id: 'smoke-pi', name: 'Smoke' })
 assert.equal(dev.status, 201)
 assert.ok(dev.data.token.length > 30 && !('token_hash' in dev.data))

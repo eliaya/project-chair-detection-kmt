@@ -7,6 +7,7 @@ import {
   idsSchema,
   loginSchema,
   occupancyPayloadSchema,
+  setupSchema,
   thresholdsSchema,
   zoneSchema,
 } from '../shared/schemas'
@@ -14,6 +15,7 @@ import {
   DUMMY_HASH,
   hashPassword,
   randomToken,
+  secretEquals,
   sha256,
   signSession,
   verifyPassword,
@@ -104,6 +106,40 @@ async function auth(req: Request, env: Env, action?: string) {
     return json({}, 200, { 'Set-Cookie': sessionCookie('', 0) })
   if (action === 'me' && req.method === 'GET')
     return json(await requireAdmin(req, env))
+  throw new HttpError(404, 'Not Found')
+}
+
+// First-run setup: open only while no admin exists, and only with the SETUP_TOKEN secret.
+async function setup(req: Request, env: Env) {
+  if (req.method === 'GET') {
+    const anyAdmin = await env.DB.prepare('SELECT 1 FROM admins LIMIT 1').first()
+    return json({ needsAdmin: !anyAdmin, enabled: !!env.SETUP_TOKEN })
+  }
+  if (req.method === 'POST') {
+    if (!env.SETUP_TOKEN)
+      throw new HttpError(
+        403,
+        'SETUP_TOKEN が未設定です。npm run admin:create で管理者を作成してください'
+      )
+    const ip = req.headers.get('CF-Connecting-IP') ?? 'local'
+    if (!(await env.LOGIN_LIMITER.limit({ key: `setup:${ip}` })).success)
+      throw new HttpError(429, '試行が多すぎます。1分後に再試行してください')
+    const d = await body(req, setupSchema)
+    if (!(await secretEquals(d.setup_code, env.SETUP_TOKEN)))
+      throw new HttpError(401, 'Setup code が違います')
+    // Single statement, so two concurrent requests cannot both create an admin.
+    const row = await env.DB.prepare(
+      `INSERT INTO admins (email, name, password_hash)
+       SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM admins)
+       RETURNING id, email, name`
+    )
+      .bind(d.email, d.name, await hashPassword(d.password))
+      .first<Admin>()
+    if (!row)
+      throw new HttpError(409, '初期設定は完了しています。ログインしてください')
+    const token = await signSession(row.id, env.SESSION_SECRET, SESSION_TTL_S)
+    return json(row, 201, { 'Set-Cookie': sessionCookie(token, SESSION_TTL_S) })
+  }
   throw new HttpError(404, 'Not Found')
 }
 
@@ -397,6 +433,7 @@ async function route(req: Request, env: Env) {
   if (res === 'occupancy' && !id && req.method === 'POST')
     return ingest(req, env, await requireDevice(req, env))
   if (res === 'auth') return auth(req, env, id)
+  if (res === 'setup' && !id) return setup(req, env)
 
   const me = await requireAdmin(req, env)
   if (res === 'admins' && !action) return admins(req, env, me, id)

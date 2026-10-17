@@ -93,3 +93,11 @@ export const sha256 = async (s: string) =>
 
 export const randomToken = () =>
   b64url(crypto.getRandomValues(new Uint8Array(32)))
+
+// Constant-time comparison of two secrets of any length (hashed to a fixed size first).
+export async function secretEquals(a: string, b: string) {
+  const [x, y] = await Promise.all(
+    [a, b].map((s) => crypto.subtle.digest('SHA-256', enc.encode(s)))
+  )
+  return crypto.subtle.timingSafeEqual(x, y)
+}

@@ -1,1 +1,2 @@
 SESSION_SECRET=change-me-to-a-long-random-string
+SETUP_TOKEN=change-me-setup-code
