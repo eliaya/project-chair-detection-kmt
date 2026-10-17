@@ -10,7 +10,12 @@ const id = z
   .regex(/^[A-Za-z0-9_-]{1,32}$/, '英数字・_・- のみ、32文字以内')
 const name = z.string().trim().max(64)
 const email = z.email().trim().toLowerCase()
-const password = z.string().min(8, '8文字以上').max(128)
+// Half-width only: an IME left on in a terminal silently produces full-width text.
+const password = z
+  .string()
+  .min(8, '8文字以上')
+  .max(128)
+  .regex(/^[\x21-\x7E]+$/, '半角英数字・記号のみ（全角・空白は不可）')
 
 export const seatStatuses = [
   'empty',

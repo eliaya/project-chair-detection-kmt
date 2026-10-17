@@ -22,7 +22,8 @@ export const resources = {
         name: 'password',
         label: 'パスワード',
         type: 'password',
-        description: '8文字以上。編集時に空欄なら変更しません。',
+        description:
+          '半角英数字・記号 8文字以上。編集時に空欄なら変更しません。',
       },
     ],
     createSchema: adminCreateSchema,
