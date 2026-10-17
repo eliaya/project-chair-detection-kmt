@@ -9,7 +9,7 @@
 | `worker/`                 | API `/api/*`（管理者ログイン、CRUD、Pi 向けの `GET /api/config`・`POST /api/occupancy`） |
 | `shared/schemas.ts`       | 画面と API で共有する入力チェック（zod）                                                 |
 | `migrations/`             | D1 スキーマ                                                                              |
-| `scripts/create-admin.ts` | 管理者アカウントの作成                                                                   |
+| `scripts/create-admin.ts` | 管理者アカウントの作成（既存のメールならパスワード再設定）                               |
 | `scripts/smoke.ts`        | API の端から端までのテスト                                                               |
 
 ## ローカル開発
