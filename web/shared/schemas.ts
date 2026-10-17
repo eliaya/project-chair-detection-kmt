@@ -1,6 +1,9 @@
 // Request schemas shared by the Worker (validation) and the admin UI (forms).
 import { z } from 'zod'
 
+// Japanese validation messages in both the API responses and the forms.
+z.config(z.locales.ja())
+
 const id = z
   .string()
   .trim()

@@ -1,4 +1,9 @@
-import { Button } from '@/components/ui/button'
+import { type z } from 'zod'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
+import { api, listQuery } from '@/lib/api'
+import { type TableStatus, seatStatusLabel } from '@/lib/seat-status'
+import { cn } from '@/lib/utils'
 import {
   Card,
   CardContent,
@@ -6,213 +11,154 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ConfigDrawer } from '@/components/config-drawer'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { TopNav } from '@/components/layout/top-nav'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
-import { Analytics } from './components/analytics'
-import { Overview } from './components/overview'
-import { RecentSales } from './components/recent-sales'
+import { PageShell } from '@/components/layout/page-shell'
+import { type SeatStatus, type zoneSchema } from '../../../shared/schemas'
+
+type Zone = z.infer<typeof zoneSchema>
+type Current = {
+  now: string
+  seats: {
+    seat_id: string
+    device_id: string
+    status: SeatStatus
+    since: string
+  }[]
+  devices: { id: string; last_seen_at: string | null }[]
+}
+
+// Research plan: seats of a device silent for 90 s are shown as unknown.
+const OFFLINE_MS = 90_000
+
+const statusClass: Record<TableStatus, string> = {
+  empty:
+    'border-emerald-500/50 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200',
+  confirming:
+    'border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200',
+  occupied: 'border-red-500/50 bg-red-500/10 text-red-800 dark:text-red-200',
+  leave_confirm:
+    'border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200',
+  unknown: 'border-dashed text-muted-foreground',
+}
+
+const elapsed = (ms: number) => {
+  const m = Math.max(0, Math.floor(ms / 60_000))
+  return m < 60 ? `${m}分` : `${Math.floor(m / 60)}時間${m % 60}分`
+}
 
 export function Dashboard() {
-  return (
-    <>
-      {/* ===== Top Heading ===== */}
-      <Header>
-        <TopNav links={topNav} className='me-auto' />
-        <Search />
-        <ThemeSwitch />
-        <ConfigDrawer />
-        <ProfileDropdown />
-      </Header>
+  const zones = useQuery(listQuery<Zone>('zones'))
+  const current = useQuery({
+    queryKey: ['occupancy', 'current'],
+    queryFn: () => api.get<Current>('/occupancy/current').then((r) => r.data),
+    refetchInterval: 5000,
+  })
 
-      {/* ===== Main ===== */}
-      <Main>
-        <div className='mb-2 flex items-center justify-between space-y-2'>
-          <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
-          <div className='flex items-center space-x-2'>
-            <Button>Download</Button>
-          </div>
-        </div>
-        <Tabs
-          orientation='vertical'
-          defaultValue='overview'
-          className='space-y-4'
-        >
-          <div className='w-full overflow-x-auto pb-2'>
-            <TabsList>
-              <TabsTrigger value='overview'>Overview</TabsTrigger>
-              <TabsTrigger value='analytics'>Analytics</TabsTrigger>
-              <TabsTrigger value='reports' disabled>
-                Reports
-              </TabsTrigger>
-              <TabsTrigger value='notifications' disabled>
-                Notifications
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value='overview' className='space-y-4'>
-            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Total Revenue
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>$45,231.89</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +20.1% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Subscriptions
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
-                    <circle cx='9' cy='7' r='4' />
-                    <path d='M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+2350</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +180.1% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>Sales</CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <rect width='20' height='14' x='2' y='5' rx='2' />
-                    <path d='M2 10h20' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+12,234</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +19% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Active Now
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M22 12h-4l-3 9L9 3l-3 9H2' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+573</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +201 since last hour
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-            <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
-              <Card className='col-span-1 lg:col-span-4'>
-                <CardHeader>
-                  <CardTitle>Overview</CardTitle>
-                </CardHeader>
-                <CardContent className='ps-2'>
-                  <Overview />
-                </CardContent>
-              </Card>
-              <Card className='col-span-1 lg:col-span-3'>
-                <CardHeader>
-                  <CardTitle>Recent Sales</CardTitle>
-                  <CardDescription>
-                    You made 265 sales this month.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RecentSales />
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-          <TabsContent value='analytics' className='space-y-4'>
-            <Analytics />
-          </TabsContent>
-        </Tabs>
-      </Main>
-    </>
+  // Server time, so a skewed browser clock does not mark devices offline.
+  const now = current.data ? Date.parse(current.data.now) : 0
+  const seats = new Map(current.data?.seats.map((s) => [s.seat_id, s]))
+  const lastSeen = new Map(
+    current.data?.devices.map((d) => [d.id, d.last_seen_at])
+  )
+  // main.py reports table i of a zone as "<zone id>_s<ii>".
+  const zoneTables = (zones.data ?? []).map((zone) => ({
+    zone,
+    tables: zone.seats.map((names, i) => {
+      const s = seats.get(`${zone.id}_s${String(i).padStart(2, '0')}`)
+      const seen = s && lastSeen.get(s.device_id)
+      const status: TableStatus =
+        s && seen && now - Date.parse(seen) <= OFFLINE_MS ? s.status : 'unknown'
+      return { names, status, since: s?.since }
+    }),
+  }))
+  const all = zoneTables.flatMap((z) => z.tables)
+  const inUse = all.filter(
+    (t) => t.status === 'occupied' || t.status === 'leave_confirm'
+  ).length
+  const unknown = all.filter((t) => t.status === 'unknown').length
+  const known = all.length - unknown
+
+  return (
+    <PageShell
+      title='ダッシュボード'
+      description='卓ごとの稼働状況（5秒ごとに更新）'
+    >
+      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+        <Stat label='卓数' value={all.length} />
+        <Stat label='利用中' value={inUse} />
+        <Stat
+          label='稼働率'
+          value={known ? `${Math.round((inUse / known) * 100)}%` : '—'}
+          hint='不明の卓を除く'
+        />
+        <Stat
+          label='不明'
+          value={unknown}
+          hint='未受信、または90秒以上通信なし'
+        />
+      </div>
+
+      {zones.data?.length === 0 && (
+        <Card>
+          <CardContent className='text-muted-foreground'>
+            ゾーンがまだありません。
+            <Link to='/zones' className='underline underline-offset-4'>
+              ゾーン
+            </Link>
+            を追加してください。
+          </CardContent>
+        </Card>
+      )}
+
+      {zoneTables.map(({ zone, tables }) => (
+        <Card key={zone.id}>
+          <CardHeader>
+            <CardTitle>{zone.id}</CardTitle>
+            <CardDescription>{zone.description}</CardDescription>
+          </CardHeader>
+          <CardContent className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'>
+            {tables.map((t, i) => (
+              <div
+                key={i}
+                className={cn('rounded-lg border p-3', statusClass[t.status])}
+              >
+                <div className='truncate text-sm'>{t.names.join('・')}</div>
+                <div className='mt-1 flex items-baseline justify-between gap-2'>
+                  <span className='font-semibold'>
+                    {seatStatusLabel[t.status]}
+                  </span>
+                  {t.since && t.status !== 'unknown' && (
+                    <span className='text-xs tabular-nums'>
+                      {elapsed(now - Date.parse(t.since))}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ))}
+    </PageShell>
   )
 }
 
-const topNav = [
-  {
-    title: 'Overview',
-    href: 'dashboard/overview',
-    isActive: true,
-    disabled: false,
-  },
-  {
-    title: 'Customers',
-    href: 'dashboard/customers',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Products',
-    href: 'dashboard/products',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Settings',
-    href: 'dashboard/settings',
-    isActive: false,
-    disabled: true,
-  },
-]
+function Stat({
+  label,
+  value,
+  hint,
+}: {
+  label: string
+  value: React.ReactNode
+  hint?: string
+}) {
+  return (
+    <Card className='gap-1 py-4'>
+      <CardHeader className='px-4'>
+        <CardDescription>{label}</CardDescription>
+      </CardHeader>
+      <CardContent className='px-4'>
+        <div className='text-2xl font-bold tabular-nums'>{value}</div>
+        {hint && <p className='text-xs text-muted-foreground'>{hint}</p>}
+      </CardContent>
+    </Card>
+  )
+}
