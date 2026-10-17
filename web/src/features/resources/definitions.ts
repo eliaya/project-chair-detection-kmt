@@ -7,7 +7,7 @@ import {
 } from '../../../shared/schemas'
 import { type ResourceDef } from './resource-page'
 
-export const datetime = (v: unknown) =>
+const datetime = (v: unknown) =>
   v ? new Date(String(v)).toLocaleString('ja-JP') : '—'
 
 export const resources = {

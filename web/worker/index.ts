@@ -137,6 +137,12 @@ async function setup(req: Request, env: Env) {
       .first<Admin>()
     if (!row)
       throw new HttpError(409, '初期設定は完了しています。ログインしてください')
+    // Only the request that created the admin gets here, so a losing race cannot rename the site.
+    await env.DB.prepare(
+      "INSERT INTO settings (key, value) VALUES ('site_name', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value"
+    )
+      .bind(JSON.stringify(d.site_name))
+      .run()
     const token = await signSession(row.id, env.SESSION_SECRET, SESSION_TTL_S)
     return json(row, 201, { 'Set-Cookie': sessionCookie(token, SESSION_TTL_S) })
   }
@@ -442,6 +448,12 @@ async function route(req: Request, env: Env) {
     return crud(req, env, res, id)
   if (res === 'settings' && id === 'thresholds' && !action)
     return thresholds(req, env)
+  if (res === 'settings' && id === 'site_name' && !action && req.method === 'GET') {
+    const v = await env.DB.prepare(
+      "SELECT value FROM settings WHERE key = 'site_name'"
+    ).first<string>('value')
+    return json({ site_name: v ? JSON.parse(v) : null })
+  }
   if (res === 'occupancy' && !action) return occupancy(req, env, url, id)
   throw new HttpError(404, 'Not Found')
 }

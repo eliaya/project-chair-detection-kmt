@@ -21,7 +21,7 @@
 ```
 
 管理者がまだいなければ、開いた画面がセットアップウィザード（`/setup`）になります。
-Setup code は `web/.dev.vars` の SETUP_TOKEN です。続けてデバイス・カメラ・ゾーン・閾値を設定します。
+サイト名と最初の管理者を設定します（Setup code は `web/.dev.vars` の SETUP_TOKEN）。
 
 API テスト（`smoke-*` のデータを作って消します。ログインは 1 分 5 回までなので連続実行は 2 回まで）:
 
@@ -42,15 +42,15 @@ npx wrangler secret put SESSION_SECRET      # 値は `openssl rand -hex 32` な�
 npx wrangler secret put SETUP_TOKEN         # 最初の管理者の作成に使う初期化コード
 ```
 
-デプロイした URL を開くとセットアップウィザードが表示されます。Setup code（SETUP_TOKEN）を入力して最初の管理者を
-作成してください。管理者が 1 人でも存在すると `/api/setup` は閉じます。
+デプロイした URL を開くとセットアップウィザードが表示されます。サイト名と Setup code（SETUP_TOKEN）を入力して
+最初の管理者を作成してください。管理者が 1 人でも存在すると `/api/setup` は閉じます。
 パスワードを忘れた場合は、他の管理者が「管理者」画面で再設定できます。管理者が 1 人だけの場合は
 `npx wrangler d1 execute kmt-occupancy --remote --command "DELETE FROM admins"` で管理者を削除すると、
 ウィザードから作り直せます（SETUP_TOKEN が必要。他のデータは残ります）。
 
 ## Raspberry Pi 側
 
-1. セットアップウィザード（またはダッシュボードの「セットアップを開始」）でデバイスを登録し、表示された API トークンを
+1. 「デバイス」画面（またはダッシュボードの「デバイスを登録」）でデバイスを登録し、表示された API トークンを
    控えます（再表示できません。紛失時は「デバイス」画面で「トークン再発行」）。
 2. 続けてカメラ・ゾーンを登録します（既存の `config.json` の値をそのまま貼れます）。
 3. Pi で起動します。

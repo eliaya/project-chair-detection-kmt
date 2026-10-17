@@ -29,6 +29,7 @@ export const adminCreateSchema = z.object({ email, name, password })
 // First admin from the web setup wizard; setup_code must match the SETUP_TOKEN secret.
 export const setupSchema = adminCreateSchema.extend({
   setup_code: z.string().min(1, 'Setup code を入力してください').max(256),
+  site_name: name.min(1, 'サイト名を入力してください'),
 })
 // Empty password on update keeps the current one.
 export const adminUpdateSchema = adminCreateSchema.extend({

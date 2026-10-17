@@ -22,6 +22,16 @@ export const setupQuery = queryOptions({
   staleTime: 0,
 })
 
+// Set by the setup wizard; null on databases set up before it existed.
+export const siteNameQuery = queryOptions({
+  queryKey: ['site_name'],
+  queryFn: () =>
+    api
+      .get<{ site_name: string | null }>('/settings/site_name')
+      .then((r) => r.data.site_name),
+  staleTime: Infinity,
+})
+
 export const listQuery = <T>(key: string) =>
   queryOptions({
     queryKey: [key],

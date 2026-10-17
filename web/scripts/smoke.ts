@@ -39,7 +39,7 @@ step('login, wrong password rejected')
 // Setup is closed once an admin exists (SMOKE_SETUP_CODE = the SETUP_TOKEN, optional).
 const setupStatus = (await call('GET', '/api/setup')).data
 assert.equal(setupStatus.needsAdmin, false)
-const firstAdmin = { email: 'late@example.com', name: '', password: 'smoke-pass-123' }
+const firstAdmin = { email: 'late@example.com', name: '', password: 'smoke-pass-123', site_name: 'Smoke' }
 assert.equal(
   (await call('POST', '/api/setup', { ...firstAdmin, setup_code: 'wrong' })).status,
   setupStatus.enabled ? 401 : 403
@@ -49,6 +49,7 @@ if (process.env.SMOKE_SETUP_CODE)
     (await call('POST', '/api/setup', { ...firstAdmin, setup_code: process.env.SMOKE_SETUP_CODE })).status,
     409
   )
+assert.equal((await call('GET', '/api/settings/site_name')).status, 200)
 step('setup endpoint: wrong code rejected, closed after the first admin')
 
 const dev = await call('POST', '/api/devices', { id: 'smoke-pi', name: 'Smoke' })

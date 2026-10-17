@@ -108,7 +108,7 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link to='/setup'>セットアップを開始</Link>
+              <Link to='/devices'>デバイスを登録</Link>
             </Button>
           </CardContent>
         </Card>
