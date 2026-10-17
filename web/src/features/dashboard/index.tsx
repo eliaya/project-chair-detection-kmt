@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router'
 import { api, listQuery } from '@/lib/api'
 import { type TableStatus, seatStatusLabel } from '@/lib/seat-status'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -99,12 +100,16 @@ export function Dashboard() {
 
       {zones.data?.length === 0 && (
         <Card>
-          <CardContent className='text-muted-foreground'>
-            ゾーンがまだありません。
-            <Link to='/zones' className='underline underline-offset-4'>
-              ゾーン
-            </Link>
-            を追加してください。
+          <CardHeader>
+            <CardTitle>初期設定を完了しましょう</CardTitle>
+            <CardDescription>
+              デバイス・カメラ・ゾーンを登録すると、卓の稼働状況がここに表示されます。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link to='/setup'>セットアップを開始</Link>
+            </Button>
           </CardContent>
         </Card>
       )}

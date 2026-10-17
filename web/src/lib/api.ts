@@ -13,6 +13,15 @@ export const meQuery = queryOptions({
   retry: false,
 })
 
+export type SetupStatus = { needsAdmin: boolean; enabled: boolean }
+
+// Public: whether the first admin still has to be created via /setup.
+export const setupQuery = queryOptions({
+  queryKey: ['setup'],
+  queryFn: () => api.get<SetupStatus>('/setup').then((r) => r.data),
+  staleTime: 0,
+})
+
 export const listQuery = <T>(key: string) =>
   queryOptions({
     queryKey: [key],

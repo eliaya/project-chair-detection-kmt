@@ -2,6 +2,7 @@ import { type z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
 import { listQuery } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import {
   Form,
   FormControl,
@@ -26,6 +27,8 @@ export type Field = {
   description?: string
   // Locked when editing (primary keys)
   immutable?: boolean
+  // Spans both columns when the form is laid out as a grid
+  wide?: boolean
 }
 
 type FieldsFormProps = {
@@ -34,6 +37,7 @@ type FieldsFormProps = {
   schema: z.ZodType
   initial?: Record<string, unknown>
   isEdit?: boolean
+  className?: string
   onValid: (values: Record<string, unknown>) => void
 }
 
@@ -49,6 +53,7 @@ export function FieldsForm({
   schema,
   initial = {},
   isEdit = false,
+  className = 'space-y-4',
   onValid,
 }: FieldsFormProps) {
   const form = useForm<Record<string, string>>({
@@ -73,8 +78,12 @@ export function FieldsForm({
     }
     const r = schema.safeParse(values)
     if (!r.success) {
+      const shown = new Set<string>()
       for (const issue of r.error.issues) {
         const [name, ...rest] = issue.path.map(String)
+        // First issue per field is the most basic one (e.g. length before charset).
+        if (shown.has(name)) continue
+        shown.add(name)
         form.setError(name, {
           message: rest.length
             ? `${rest.join('.')}: ${issue.message}`
@@ -88,14 +97,16 @@ export function FieldsForm({
 
   return (
     <Form {...form}>
-      <form id={id} onSubmit={form.handleSubmit(submit)} className='space-y-4'>
+      <form id={id} onSubmit={form.handleSubmit(submit)} className={className}>
         {fields.map((f) => (
           <FormField
             key={f.name}
             control={form.control}
             name={f.name}
             render={({ field }) => (
-              <FormItem>
+              <FormItem
+                className={cn('content-start', f.wide && 'sm:col-span-2')}
+              >
                 <FormLabel>{f.label}</FormLabel>
                 {f.type === 'select' ? (
                   <OptionsSelect

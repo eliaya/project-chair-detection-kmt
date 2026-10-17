@@ -16,16 +16,20 @@
 
 ```sh
 npm install
-cp .dev.vars.example .dev.vars        # SESSION_SECRET を長いランダム文字列に変更
+cp .dev.vars.example .dev.vars        # SESSION_SECRET と SETUP_TOKEN を長いランダム文字列に変更
 npm run db:migrate:local
-npm run admin:create -- you@example.com "名前"   # パスワードを聞かれます
 npm run dev                            # http://localhost:5173
 ```
+
+管理者がまだいなければ、開いた画面がセットアップウィザード（`/setup`）になります。
+SETUP_TOKEN の値で最初の管理者を作成し、続けてデバイス・カメラ・ゾーン・閾値を設定します。
+CLI で作る場合は `npm run admin:create -- you@example.com "名前"`（既存のメールならパスワード再設定）。
 
 API テスト（`smoke-*` のデータを作って消します。ログインは 1 分 5 回までなので連続実行は 2 回まで）:
 
 ```sh
 SMOKE_EMAIL=you@example.com SMOKE_PASSWORD=... npm run smoke
+# 任意: SMOKE_SETUP_CODE=<SETUP_TOKEN> で「初期化後は /api/setup が閉じている」ことも確認
 ```
 
 ## デプロイ
@@ -37,13 +41,18 @@ npx wrangler d1 create kmt-occupancy
 npm run db:migrate:remote
 npm run deploy
 npx wrangler secret put SESSION_SECRET      # 値は `openssl rand -hex 32` などで生成
-npm run admin:create -- you@example.com "名前" --remote
+npx wrangler secret put SETUP_TOKEN         # 最初の管理者の作成に使う初期化コード
 ```
+
+デプロイした URL を開くとセットアップウィザードが表示されます。Setup code（SETUP_TOKEN）を入力して最初の管理者を
+作成してください。管理者が 1 人でも存在すると `/api/setup` は閉じます。
+CLI で作る場合は `npm run admin:create -- you@example.com "名前" --remote`。
 
 ## Raspberry Pi 側
 
-1. 管理画面の「デバイス」で追加し、表示された API トークンを控えます（再表示できません。紛失時は「トークン再発行」）。
-2. 「カメラ」「ゾーン」を登録します（既存の `config.json` の値をそのまま貼れます）。
+1. セットアップウィザード（またはダッシュボードの「セットアップを開始」）でデバイスを登録し、表示された API トークンを
+   控えます（再表示できません。紛失時は「デバイス」画面で「トークン再発行」）。
+2. 続けてカメラ・ゾーンを登録します（既存の `config.json` の値をそのまま貼れます）。
 3. Pi で起動します。
 
 ```sh
