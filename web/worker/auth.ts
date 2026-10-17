@@ -1,4 +1,4 @@
-// Web Crypto helpers, shared by the Worker and scripts/create-admin.ts (Node).
+// Web Crypto helpers for the Worker.
 const enc = new TextEncoder()
 // workerd rejects PBKDF2 iteration counts above 100k; the count is stored in each hash.
 const ITERATIONS = 100_000

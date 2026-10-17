@@ -321,7 +321,7 @@ export function Onboarding() {
                       {
                         title: 'SETUP_TOKEN が未設定です',
                         description:
-                          'npx wrangler secret put SETUP_TOKEN で設定するか、npm run admin:create -- <email> --remote で管理者を作成してください。',
+                          'npx wrangler secret put SETUP_TOKEN で設定してください（ローカルは web/.dev.vars）。',
                       },
                     ]}
                   />

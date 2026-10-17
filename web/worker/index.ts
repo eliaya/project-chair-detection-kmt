@@ -119,7 +119,7 @@ async function setup(req: Request, env: Env) {
     if (!env.SETUP_TOKEN)
       throw new HttpError(
         403,
-        'SETUP_TOKEN が未設定です。npm run admin:create で管理者を作成してください'
+        'SETUP_TOKEN が未設定です。npx wrangler secret put SETUP_TOKEN で設定してください'
       )
     const ip = req.headers.get('CF-Connecting-IP') ?? 'local'
     if (!(await env.LOGIN_LIMITER.limit({ key: `setup:${ip}` })).success)

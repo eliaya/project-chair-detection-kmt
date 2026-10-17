@@ -3,27 +3,25 @@
 [shadcn-admin](https://github.com/satnaing/shadcn-admin)（MIT, v2.2.1）をベースにした管理画面と、
 同じ Cloudflare Worker で動く API です。映像は扱わず、`main.py` が送る数値データだけを保存します。
 
-| パス                      | 内容                                                                                     |
-| ------------------------- | ---------------------------------------------------------------------------------------- |
-| `src/`                    | 管理画面（ダッシュボード、履歴、ゾーン/カメラ/デバイス/閾値/管理者の CRUD）              |
-| `worker/`                 | API `/api/*`（管理者ログイン、CRUD、Pi 向けの `GET /api/config`・`POST /api/occupancy`） |
-| `shared/schemas.ts`       | 画面と API で共有する入力チェック（zod）                                                 |
-| `migrations/`             | D1 スキーマ                                                                              |
-| `scripts/create-admin.ts` | 管理者アカウントの作成（既存のメールならパスワード再設定）                               |
-| `scripts/smoke.ts`        | API の端から端までのテスト                                                               |
+| パス                | 内容                                                                                     |
+| ------------------- | ---------------------------------------------------------------------------------------- |
+| `src/`              | 管理画面（ダッシュボード、履歴、ゾーン/カメラ/デバイス/閾値/管理者の CRUD）              |
+| `worker/`           | API `/api/*`（管理者ログイン、CRUD、Pi 向けの `GET /api/config`・`POST /api/occupancy`） |
+| `shared/schemas.ts` | 画面と API で共有する入力チェック（zod）                                                 |
+| `migrations/`       | D1 スキーマ                                                                              |
+| `scripts/smoke.ts`  | API の端から端までのテスト                                                               |
 
 ## ローカル開発
 
+リポジトリ直下で実行します（依存のインストール、`web/.dev.vars` の生成、ローカル D1 のマイグレーション、起動まで行います）。
+
 ```sh
-npm install
-cp .dev.vars.example .dev.vars        # SESSION_SECRET と SETUP_TOKEN を長いランダム文字列に変更
-npm run db:migrate:local
-npm run dev                            # http://localhost:5173
+./dev.sh            # http://localhost:5173
+./dev.sh --reset    # ローカルのデータ（D1・.dev.vars）をすべて削除し、まっさらな状態から起動
 ```
 
 管理者がまだいなければ、開いた画面がセットアップウィザード（`/setup`）になります。
-SETUP_TOKEN の値で最初の管理者を作成し、続けてデバイス・カメラ・ゾーン・閾値を設定します。
-CLI で作る場合は `npm run admin:create -- you@example.com "名前"`（既存のメールならパスワード再設定）。
+Setup code は `web/.dev.vars` の SETUP_TOKEN です。続けてデバイス・カメラ・ゾーン・閾値を設定します。
 
 API テスト（`smoke-*` のデータを作って消します。ログインは 1 分 5 回までなので連続実行は 2 回まで）:
 
@@ -46,7 +44,9 @@ npx wrangler secret put SETUP_TOKEN         # 最初の管理者の作成に使�
 
 デプロイした URL を開くとセットアップウィザードが表示されます。Setup code（SETUP_TOKEN）を入力して最初の管理者を
 作成してください。管理者が 1 人でも存在すると `/api/setup` は閉じます。
-CLI で作る場合は `npm run admin:create -- you@example.com "名前" --remote`。
+パスワードを忘れた場合は、他の管理者が「管理者」画面で再設定できます。管理者が 1 人だけの場合は
+`npx wrangler d1 execute kmt-occupancy --remote --command "DELETE FROM admins"` で管理者を削除すると、
+ウィザードから作り直せます（SETUP_TOKEN が必要。他のデータは残ります）。
 
 ## Raspberry Pi 側
 
