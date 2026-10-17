@@ -32,3 +32,8 @@ dist-ssr
 # Vitest artifacts (browser screenshots/attachments)
 **/__screenshots__/
 .vitest-attachments/
+
+# Cloudflare
+.wrangler
+.dev.vars*
+!.dev.vars.example

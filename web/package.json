@@ -1,6 +1,6 @@
 {
-  "name": "shadcn-admin",
-  "private": false,
+  "name": "kmt-occupancy-admin",
+  "private": true,
   "version": "2.2.1",
   "type": "module",
   "scripts": {
@@ -16,7 +16,13 @@
     "test:ui": "vitest --ui --browser.headless",
     "test:browser": "vitest",
     "test:coverage": "vitest run --coverage --browser.headless",
-    "test:browser:install": "playwright install chromium --with-deps"
+    "test:browser:install": "playwright install chromium --with-deps",
+    "deploy": "npm run build && wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "db:migrate:local": "wrangler d1 migrations apply kmt-occupancy --local",
+    "db:migrate:remote": "wrangler d1 migrations apply kmt-occupancy --remote",
+    "admin:create": "node scripts/create-admin.ts",
+    "smoke": "node scripts/smoke.ts"
   },
   "dependencies": {
     "@clerk/react": "^6.4.3",
@@ -64,6 +70,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.64.0",
     "@eslint/js": "^10.0.1",
     "@faker-js/faker": "^10.4.0",
     "@tanstack/eslint-plugin-query": "^5.99.0",
@@ -90,6 +97,7 @@
     "typescript-eslint": "^8.58.2",
     "vite": "^8.0.8",
     "vitest": "^4.1.4",
-    "vitest-browser-react": "^2.2.0"
+    "vitest-browser-react": "^2.2.0",
+    "wrangler": "^4.151.1"
   }
 }
