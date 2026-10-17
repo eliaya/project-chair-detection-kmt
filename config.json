@@ -1,0 +1,61 @@
+{
+  "cameras": [
+    {
+      "id": "cam1",
+      "device": "/dev/video0",
+      "fps": 1,
+      "resolution": [1920, 1080]
+    }
+  ],
+  "zones": [
+    {
+      "id": "zone_A",
+      "camera": "cam1",
+      "description": "2人席（向かい合わせ）× 4テーブル",
+      "vertices": [
+        [100, 100], [600, 80], [620, 350], [80, 370]
+      ],
+      "seats": [
+        ["A01", "A02"],
+        ["A03", "A04"],
+        ["A05", "A06"],
+        ["A07", "A08"]
+      ]
+    },
+    {
+      "id": "zone_B",
+      "camera": "cam1",
+      "description": "4人席（向かい合わせ）× 2テーブル",
+      "vertices": [
+        [650, 100], [1100, 80], [1120, 400], [670, 420]
+      ],
+      "seats": [
+        ["B01", "B02", "B03", "B04"],
+        ["B05", "B06", "B07", "B08"]
+      ]
+    },
+    {
+      "id": "zone_C",
+      "camera": "cam1",
+      "description": "カウンター席 × 8",
+      "vertices": [
+        [100, 500], [1200, 480], [1220, 600], [120, 620]
+      ],
+      "seats": [
+        ["C01"], ["C02"], ["C03"], ["C04"],
+        ["C05"], ["C06"], ["C07"], ["C08"]
+      ]
+    }
+  ],
+  "cloud": {
+    "api_url": "https://your-app.workers.dev/api/occupancy",
+    "token": "YOUR_TOKEN"
+  },
+  "thresholds": {
+    "confidence": 0.5,
+    "confirm_frames": 3,
+    "leave_grace_s": 10.0,
+    "staff_aspect_ratio": 1.5,
+    "staff_speed_px": 50
+  }
+}
