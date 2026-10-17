@@ -5,6 +5,7 @@ import math
 import os
 import socket
 import threading
+import urllib.request
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
@@ -44,7 +45,18 @@ def check_zone_membership(cx, cy, zones):
 
 
 def load_config(path="config.json"):
-    """Load config from JSON file. Override with env vars if set."""
+    """Load config from JSON file, or from an http(s) URL (the Workers
+    GET /api/config, authorized with $API_TOKEN). Override with env vars if set.
+    A failed fetch falls back to the local config.json."""
     filepath = os.environ.get("CONFIG_PATH", path)
+    if filepath.startswith(("http://", "https://")):
+        req = urllib.request.Request(filepath, headers={
+            "Authorization": f"Bearer {os.environ.get('API_TOKEN', '')}"})
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return json.load(resp)
+        except (OSError, ValueError) as e:
+            print(f"  [config] {filepath} 取得失敗 ({e}) → config.json を使用")
+            filepath = "config.json"
     with open(filepath) as f:
         return json.load(f)

@@ -272,15 +272,24 @@ class CloudSync:
         self.device_id = device_id
         self._queue = deque()
         self._last_heartbeat = time.time()
+        self._last = {}   # seat_id -> latest result, re-sent by heartbeat
 
-    def submit(self, results):
-        payload = {
+    def _payload(self, occupancy):
+        return {
             "device_id": self.device_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "occupancy": results,
+            "occupancy": occupancy,
         }
-        if not self._send(payload):
-            self._queue.append(payload)
+
+    def submit(self, results):
+        """Send only seats whose status changed (keeps Workers/D1 in free tier)."""
+        changed = {sid: r for sid, r in results.items()
+                   if self._last.get(sid, {}).get("status") != r.get("status")}
+        self._last.update(results)
+        if changed:
+            payload = self._payload(changed)
+            if not self._send(payload):
+                self._queue.append(payload)
 
     def heartbeat(self):
         now = time.time()
@@ -290,6 +299,9 @@ class CloudSync:
         print(f"  [heartbeat] {self.device_id}")
         while self._queue:
             self._send(self._queue.popleft())
+        # Full snapshot: keeps the device "online" (90 s rule) and repairs lost updates.
+        if self._last:
+            self._send(self._payload(dict(self._last)))
 
     def _send(self, payload):
         if not self.api_url:

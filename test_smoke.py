@@ -203,6 +203,24 @@ class TestCloudSync(unittest.TestCase):
         # Should be in queue (no real server to receive)
         self.assertEqual(len(cloud._queue), 1)
 
+    def test_submit_sends_only_status_changes(self):
+        from main import CloudSync
+        cloud = CloudSync(device_id="test4")
+        sent = []
+        cloud._send = lambda p: sent.append(p) or True
+        cloud.submit({"s1": {"status": "occupied", "count": 1}})
+        cloud.submit({"s1": {"status": "occupied", "count": 2}})  # same status
+        cloud.submit({"s1": {"status": "empty", "count": 0},
+                      "s2": {"status": "empty", "count": 0}})
+        self.assertEqual([p["occupancy"] for p in sent], [
+            {"s1": {"status": "occupied", "count": 1}},
+            {"s1": {"status": "empty", "count": 0},
+             "s2": {"status": "empty", "count": 0}},
+        ])
+        cloud._last_heartbeat = 0
+        cloud.heartbeat()  # full snapshot
+        self.assertEqual(set(sent[-1]["occupancy"]), {"s1", "s2"})
+
     def test_heartbeat_noop(self):
         from main import CloudSync
         cloud = CloudSync(device_id="test3")
@@ -239,6 +257,48 @@ class TestConfigLoad(unittest.TestCase):
             self.assertIn("thresholds", cfg)
             self.assertGreaterEqual(len(cfg["zones"]), 1)
             self.assertIn("confidence", cfg["thresholds"])
+
+
+class TestConfigURL(unittest.TestCase):
+    """load_config from the Workers GET /api/config."""
+
+    def test_load_from_url_with_token(self):
+        import http.server
+        import threading
+        from unittest import mock
+        from utils import load_config
+        seen = {}
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                seen["auth"] = self.headers.get("Authorization")
+                body = json.dumps({"zones": [], "thresholds": {}}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *a):
+                pass
+
+        srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=srv.handle_request, daemon=True).start()
+        url = f"http://127.0.0.1:{srv.server_port}/api/config"
+        with mock.patch.dict(os.environ, {"API_TOKEN": "tok"}):
+            cfg = load_config(url)
+        srv.server_close()
+        self.assertEqual(cfg, {"zones": [], "thresholds": {}})
+        self.assertEqual(seen["auth"], "Bearer tok")
+
+    def test_unreachable_url_falls_back_to_local_file(self):
+        from utils import load_config
+        cwd = os.getcwd()
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        try:
+            cfg = load_config("http://127.0.0.1:1/api/config")
+        finally:
+            os.chdir(cwd)
+        self.assertIn("zones", cfg)
 
 
 class TestIntegration(unittest.TestCase):
