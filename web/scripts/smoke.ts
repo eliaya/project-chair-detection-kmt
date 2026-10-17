@@ -97,9 +97,11 @@ assert.equal((await call('DELETE', `/api/admins/${me.id}`)).status, 400)
 step('admin CRUD, cannot delete self')
 
 assert.equal((await call('DELETE', '/api/zones/smoke-zone')).status, 204)
+const after = (await call('GET', '/api/occupancy/current')).data
+assert.ok(!after.seats.some((s: { seat_id: string }) => s.seat_id.startsWith('smoke-zone_')))
 assert.equal((await call('DELETE', '/api/cameras/smoke-cam')).status, 204)
 assert.equal((await call('DELETE', '/api/devices/smoke-pi')).status, 204)
 assert.equal((await call('DELETE', '/api/devices/smoke-pi')).status, 404)
 await call('POST', '/api/auth/logout')
 assert.equal((await call('GET', '/api/auth/me')).status, 401)
-step('cleanup and logout')
+step('cleanup (zone delete clears its seat states) and logout')

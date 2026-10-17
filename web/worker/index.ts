@@ -239,10 +239,21 @@ async function crud(
     if (!r.meta.changes) throw new HttpError(404, 'Not Found')
     return json(d)
   }
-  if (id && req.method === 'DELETE')
-    return deleted(
-      await env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run()
-    )
+  if (id && req.method === 'DELETE') {
+    const [r] = await env.DB.batch([
+      env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id),
+      // A re-created zone with the same id must not inherit old seat states.
+      // ids are [A-Za-z0-9_-], so they contain no GLOB metacharacters.
+      ...(table === 'zones'
+        ? [
+            env.DB.prepare(
+              "DELETE FROM seat_state WHERE seat_id GLOB ? || '_s[0-9]*'"
+            ).bind(id),
+          ]
+        : []),
+    ])
+    return deleted(r)
+  }
   throw new HttpError(404, 'Not Found')
 }
 
