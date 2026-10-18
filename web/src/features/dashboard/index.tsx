@@ -42,6 +42,17 @@ const statusClass: Record<TableStatus, string> = {
   unknown: 'border-dashed text-muted-foreground',
 }
 
+// A table takes the most "in use" status of its seats: one seated person makes it in use.
+const tablePriority: TableStatus[] = [
+  'occupied',
+  'leave_confirm',
+  'confirming',
+  'unknown',
+  'empty',
+]
+const isSeated = (s: TableStatus) => s === 'occupied' || s === 'leave_confirm'
+const pad = (n: number) => String(n).padStart(2, '0')
+
 const elapsed = (ms: number, t: I18n['t']) => {
   const m = Math.max(0, Math.floor(ms / 60_000))
   return m < 60
@@ -64,21 +75,36 @@ export function Dashboard() {
   const lastSeen = new Map(
     current.data?.devices.map((d) => [d.id, d.last_seen_at])
   )
-  // main.py reports table i of a zone as "<zone id>_s<ii>".
+  // main.py reports seat j of table i as "<zone id>_t<ii>_s<jj>".
   const zoneTables = (zones.data ?? []).map((zone) => ({
     zone,
-    tables: zone.seats.map((names, i) => {
-      const s = seats.get(`${zone.id}_s${String(i).padStart(2, '0')}`)
-      const seen = s && lastSeen.get(s.device_id)
-      const status: TableStatus =
-        s && seen && now - Date.parse(seen) <= OFFLINE_MS ? s.status : 'unknown'
-      return { names, status, since: s?.since }
+    tables: zone.seats.map((tableSeats, i) => {
+      const seatStates = tableSeats.map((seat, j) => {
+        const s = seats.get(`${zone.id}_t${pad(i)}_s${pad(j)}`)
+        const seen = s && lastSeen.get(s.device_id)
+        const status: TableStatus =
+          s && seen && now - Date.parse(seen) <= OFFLINE_MS
+            ? s.status
+            : 'unknown'
+        return { name: seat.name, status, since: s?.since }
+      })
+      const seated = seatStates.filter((s) => isSeated(s.status))
+      return {
+        seats: seatStates,
+        status: tablePriority.find((p) =>
+          seatStates.some((s) => s.status === p)
+        )!,
+        seated: seated.length,
+        // In use since the first of its current guests sat down.
+        since: seated
+          .map((s) => s.since)
+          .filter(Boolean)
+          .sort()[0],
+      }
     }),
   }))
   const all = zoneTables.flatMap((z) => z.tables)
-  const inUse = all.filter(
-    (table) => table.status === 'occupied' || table.status === 'leave_confirm'
-  ).length
+  const inUse = all.filter((table) => isSeated(table.status)).length
   const unknown = all.filter((table) => table.status === 'unknown').length
   const known = all.length - unknown
 
@@ -128,17 +154,33 @@ export function Dashboard() {
                   statusClass[table.status]
                 )}
               >
-                <div className='truncate text-sm'>{table.names.join('・')}</div>
+                <div className='flex flex-wrap gap-x-2 text-sm'>
+                  {table.seats.map((seat) => (
+                    <span
+                      key={seat.name}
+                      className={cn(!isSeated(seat.status) && 'opacity-60')}
+                      title={t(`status.${seat.status}`)}
+                    >
+                      {seat.name}
+                    </span>
+                  ))}
+                </div>
                 <div className='mt-1 flex items-baseline justify-between gap-2'>
                   <span className='font-semibold'>
                     {t(`status.${table.status}`)}
                   </span>
-                  {table.since && table.status !== 'unknown' && (
-                    <span className='text-xs tabular-nums'>
-                      {elapsed(now - Date.parse(table.since), t)}
-                    </span>
-                  )}
+                  <span className='text-xs tabular-nums'>
+                    {t('dashboard.seated', {
+                      n: table.seated,
+                      total: table.seats.length,
+                    })}
+                  </span>
                 </div>
+                {table.since && (
+                  <div className='text-xs tabular-nums'>
+                    {elapsed(now - Date.parse(table.since), t)}
+                  </div>
+                )}
               </div>
             ))}
           </CardContent>

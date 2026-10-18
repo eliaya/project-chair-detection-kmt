@@ -81,7 +81,6 @@ export const en = {
   'field.height': 'Height (px)',
   'field.resolution': 'Resolution',
   'field.description': 'Description',
-  'field.vertices': 'Vertices [x, y]',
   'field.seats': 'Tables and seats',
   'field.tablesSeats': 'Tables / seats',
 
@@ -206,6 +205,7 @@ export const en = {
   'dashboard.emptyDesc':
     'Register devices, cameras and zones to see table occupancy here.',
   'dashboard.registerDevice': 'Register a device',
+  'dashboard.seated': '{n}/{total} seated',
   'time.minutes': '{m} min',
   'time.hoursMinutes': '{h} h {m} min',
 
@@ -241,10 +241,8 @@ export const en = {
   'zones.desc':
     'Seating areas (polygons) on the camera image, and the tables and seats in them.',
   'zones.descPlaceholder': '2-seat tables (facing) × 4',
-  'zones.verticesHint':
-    'Pixel coordinates on the camera image. 3 or more points.',
   'zones.seatsHint':
-    'One table = an array of seat names. main.py reports the i-th table as "<zone ID>_s0i".',
+    'Paste the output of draw_zones.py. One table = an array of seats; a seat = a name and a polygon of [x, y] pixel points on the camera image (3 or more). main.py reports seat j of table i as "<zone ID>_tii_sjj".',
   'zones.count': '{tables} tables / {seats} seats',
 
   'thresholds.desc':

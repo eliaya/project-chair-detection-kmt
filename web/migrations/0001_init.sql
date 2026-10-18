@@ -25,7 +25,7 @@ CREATE TABLE cameras (
   height INTEGER NOT NULL DEFAULT 1080
 );
 
--- vertices: JSON [[x, y], ...]; seats: JSON [["A01", "A02"], ...] (one array per table).
+-- seats: JSON, one array per table (format changed in 0002_seat_polygons.sql).
 CREATE TABLE zones (
   id TEXT PRIMARY KEY,
   camera_id TEXT NOT NULL REFERENCES cameras(id),

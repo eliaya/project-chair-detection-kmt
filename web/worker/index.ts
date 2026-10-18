@@ -232,7 +232,7 @@ async function devices(req: Request, env: Env, id?: string, action?: string) {
 // Plain config tables; ids are immutable after creation (seat ids derive from zone ids).
 const configTables = {
   cameras: { schema: cameraSchema, jsonCols: [] as string[] },
-  zones: { schema: zoneSchema, jsonCols: ['vertices', 'seats'] },
+  zones: { schema: zoneSchema, jsonCols: ['seats'] },
 }
 
 async function crud(
@@ -284,7 +284,7 @@ async function crud(
       ...(table === 'zones'
         ? [
             env.DB.prepare(
-              "DELETE FROM seat_state WHERE seat_id GLOB ? || '_s[0-9]*'"
+              "DELETE FROM seat_state WHERE seat_id GLOB ? || '_t[0-9][0-9]_s[0-9][0-9]'"
             ).bind(id),
           ]
         : []),
@@ -395,7 +395,6 @@ async function deviceConfig(env: Env, deviceId: string, origin: string) {
       id: z.id,
       camera: z.camera_id,
       description: z.description,
-      vertices: JSON.parse(z.vertices as string),
       seats: JSON.parse(z.seats as string),
     })),
     thresholds: JSON.parse(th ?? '{}'),

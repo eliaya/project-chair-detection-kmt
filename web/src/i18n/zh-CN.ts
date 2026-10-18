@@ -80,7 +80,6 @@ export const zhCN: Dict = {
   'field.height': '高度 (px)',
   'field.resolution': '分辨率',
   'field.description': '说明',
-  'field.vertices': '顶点 [x, y]',
   'field.seats': '桌与座位',
   'field.tablesSeats': '桌 / 座位',
 
@@ -195,6 +194,7 @@ export const zhCN: Dict = {
   'dashboard.emptyDesc':
     '注册设备、摄像头和区域后，桌位使用状况就会显示在这里。',
   'dashboard.registerDevice': '注册设备',
+  'dashboard.seated': '{n}/{total} 席入座',
   'time.minutes': '{m} 分钟',
   'time.hoursMinutes': '{h} 小时 {m} 分',
 
@@ -227,9 +227,8 @@ export const zhCN: Dict = {
   'cameras.desc': '连接到各设备的 USB 摄像头。',
   'zones.desc': '摄像头画面上的座位区域（多边形），以及其中的桌与座位。',
   'zones.descPlaceholder': '双人座（面对面）× 4 桌',
-  'zones.verticesHint': '摄像头画面的像素坐标，至少 3 个点。',
   'zones.seatsHint':
-    '一桌 = 座位名称的数组。main.py 会将第 i 桌以“区域ID_s0i”上报。',
+    '粘贴 draw_zones.py 的输出。一桌 = 座位的数组；座位 = 名称与摄像头画面上的多边形（像素坐标 [x, y]，至少 3 个点）。main.py 会将第 i 桌第 j 个座位以“区域ID_tii_sjj”上报。',
   'zones.count': '{tables} 桌 / {seats} 个座位',
 
   'thresholds.desc':

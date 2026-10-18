@@ -8,8 +8,7 @@ import math
 import time
 import threading
 import os
-import sys
-from collections import defaultdict, deque
+from collections import deque
 from datetime import datetime, timezone
 
 from utils import load_config, point_in_polygon, bbox_bottom_center
@@ -20,21 +19,29 @@ from utils import load_config, point_in_polygon, bbox_bottom_center
 # ---------------------------------------------------------------------------
 
 class Camera:
-    """USB webcam capture. Falls back to gradient frame."""
+    """USB webcam capture (device "/dev/videoN"). device=None, or a camera that
+    cannot be opened, gives a gradient frame instead."""
 
-    def __init__(self, device=0, width=1920, height=1080):
+    def __init__(self, device=None, width=1920, height=1080):
         self.device = device
         self.width = width
         self.height = height
         self._frame_idx = 0
         self._has_cam = False
+        if device is None:
+            return
         try:
             import cv2
-            self._cap = cv2.VideoCapture(device)
+            self._cap = cv2.VideoCapture(int(str(device).replace("/dev/video", "")))
             if self._cap.isOpened():
+                # 1080p over USB 2.0 needs MJPEG; YUYV tops out at a few fps.
+                self._cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
                 self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
                 self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+                self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # read the latest frame, not a queued one
                 self._has_cam = True
+            else:
+                print(f"  [camera] {device} を開けません → グラデーション画像")
         except ImportError:
             pass
 
@@ -63,32 +70,45 @@ class Camera:
 # Detection (YOLOv8n placeholder)
 # ---------------------------------------------------------------------------
 
-def detect(frame, conf=0.5):
-    """Person detection. Returns [[x, y, w, h], ...]."""
-    try:
+class Detector:
+    """Person detection. The model is loaded once, not per frame."""
+
+    def __init__(self, conf=0.1):
         from ultralytics import YOLO
-        model = YOLO("yolov8n.pt")
-        results = model(frame, conf=conf, verbose=False)
+        self.conf = conf   # low on purpose: ByteTrack uses the low-score boxes too
+        self._model = YOLO("yolov8n.pt")
+
+    def __call__(self, frame):
+        """Returns [[x, y, w, h, score], ...] of persons."""
+        results = self._model(frame, conf=self.conf, verbose=False)
         dets = []
         for b in results[0].boxes:
             if int(b.cls.item()) == 0:
                 x1, y1, x2, y2 = b.xyxy[0].tolist()
-                dets.append([x1, y1, x2 - x1, y2 - y1])
+                dets.append([x1, y1, x2 - x1, y2 - y1, float(b.conf.item())])
         return dets
-    except ImportError:
-        pass
 
-    # Mock: two person boxes that drift slightly each frame
-    w = getattr(frame, "width", 640) or 640
-    h = getattr(frame, "height", 480) or 480
-    cx, cy = w // 2, h // 2
-    t = time.time() % 5
-    ox = int(40 * math.sin(t * 2))
-    oy = int(30 * math.cos(t * 3))
-    return [
-        [cx - 60 + ox, cy - 80 + oy, 120, 160],
-        [cx + 60 + ox, cy - 40 + oy, 100, 140],
-    ]
+
+class MockDetector:
+    """--mock: seated persons on the configured seats, each seat taken and
+    left on its own schedule, so every state transition happens."""
+
+    def __init__(self, zones, period_s=40):
+        self.period_s = period_s
+        self._seats = [seat["vertices"] for z in zones
+                       for table in z["seats"] for seat in table]
+
+    def __call__(self, frame):
+        t = time.time()
+        dets = []
+        for k, poly in enumerate(self._seats):
+            if (t / self.period_s + k * 0.37) % 1 < 0.6:  # seated 60% of the time
+                cx = sum(p[0] for p in poly) / len(poly)
+                cy = sum(p[1] for p in poly) / len(poly)
+                w, h = 100, 140
+                # Box whose lower-body point (bbox_bottom_center) is the seat centroid
+                dets.append([cx - w / 2, cy - h * 0.67, w, h])
+        return dets
 
 
 # ---------------------------------------------------------------------------
@@ -96,40 +116,54 @@ def detect(frame, conf=0.5):
 # ---------------------------------------------------------------------------
 
 class ByteTrack:
-    """Minimal ByteTrack: IoU assignment + age tracking."""
+    """ByteTrack association (Zhang et al., 2022): tracks are matched to high-score
+    detections first, then to low-score ones, so a person who is partly hidden keeps
+    the same id. Matching is greedy IoU without a Kalman filter: at about one frame
+    per second seated people barely move between frames.
 
-    def __init__(self, max_age=3, min_hits=2):
-        self.max_age = max_age
-        self.min_hits = min_hits
-        self._tracks = {}   # id -> {"bbox": [x,y,w,h], "age": int}
+    update(dets) takes [x, y, w, h, score] (score defaults to 1.0) and returns
+    [(track_id, [x, y, w, h])] for the tracks seen in this frame."""
+
+    def __init__(self, high=0.5, low=0.1, match_iou=0.3, max_lost=30):
+        self.high = high
+        self.low = low
+        self.match_iou = match_iou
+        self.max_lost = max_lost    # frames a lost track is kept for re-matching
+        self._tracks = {}           # id -> {"bbox": [x, y, w, h], "lost": int}
         self._next_id = 0
 
     def update(self, dets):
-        matched = set()
-        new_tracks = {}
-        for det in dets:
-            best_score = 0
-            best_id = None
-            for tid, t in self._tracks.items():
-                if t["age"] >= self.max_age:
-                    continue
-                s = self._iou(det, t["bbox"])
-                if s > best_score:
-                    best_score = s
-                    best_id = tid
-                    matched.add(tid)
-            if best_score > 0.3 and best_id is not None:
-                new_tracks[best_id] = {
-                    "bbox": det,
-                    "age": self._tracks[best_id]["age"] + 1,
-                }
-            else:
-                nid = self._next_id
-                self._next_id += 1
-                new_tracks[nid] = {"bbox": det, "age": 1}
-        self._tracks = new_tracks
-        return [(tid, t["bbox"]) for tid, t in self._tracks.items()
-                if t["age"] >= self.min_hits]
+        dets = [(list(d[:4]), d[4] if len(d) > 4 else 1.0) for d in dets]
+        high = [b for b, s in dets if s >= self.high]
+        low = [b for b, s in dets if self.low <= s < self.high]
+        pending = list(self._tracks)
+        first, pending, new = self._match(pending, high)
+        second, pending, _ = self._match(pending, low)   # unmatched low boxes are noise
+        for tid, box in first + second:
+            self._tracks[tid] = {"bbox": box, "lost": 0}
+        for tid in pending:
+            self._tracks[tid]["lost"] += 1
+            if self._tracks[tid]["lost"] > self.max_lost:
+                del self._tracks[tid]
+        for box in new:
+            self._tracks[self._next_id] = {"bbox": box, "lost": 0}
+            self._next_id += 1
+        return [(tid, t["bbox"]) for tid, t in self._tracks.items() if t["lost"] == 0]
+
+    def _match(self, track_ids, boxes):
+        """Greedy highest-IoU pairs. Returns (matches, unmatched ids, unmatched boxes)."""
+        pairs = sorted(((self._iou(self._tracks[tid]["bbox"], b), tid, i)
+                        for tid in track_ids for i, b in enumerate(boxes)), reverse=True)
+        used_t, used_b, matches = set(), set(), []
+        for iou, tid, i in pairs:
+            if iou < self.match_iou:
+                break
+            if tid not in used_t and i not in used_b:
+                used_t.add(tid)
+                used_b.add(i)
+                matches.append((tid, boxes[i]))
+        return (matches, [t for t in track_ids if t not in used_t],
+                [b for i, b in enumerate(boxes) if i not in used_b])
 
     @staticmethod
     def _iou(a, b):
@@ -153,11 +187,16 @@ class SeatState:
 
     def __init__(self):
         self.status = self.EMPTY
-        self.count = 0
-        self.duration_s = 0.0
+        self.count = 0              # persons in the seat polygon in the last frame
         self.last_seen = time.time()
         self.confirm_frames = 0
         self.leave_start = None
+        self.occupied_since = None  # set when the seat becomes OCCUPIED
+
+    @property
+    def duration_s(self):
+        """Seated time so far (wall clock, so it is right at any frame rate)."""
+        return time.time() - self.occupied_since if self.occupied_since else 0.0
 
     def to_dict(self):
         elapsed = max(0, time.time() - self.last_seen)
@@ -170,7 +209,8 @@ class SeatState:
 
 
 class OccupancyTracker:
-    """Manages per-seat state machines across zones."""
+    """Manages per-seat state machines across zones.
+    A seat is taken while a person's lower-body point lies in its polygon."""
 
     def __init__(self, zones, conf_frames=3, leave_grace_s=10.0):
         self.zones = zones
@@ -179,83 +219,66 @@ class OccupancyTracker:
         self.states = {}   # seat_id -> SeatState
 
     @staticmethod
-    def _sid(zone_id, idx):
-        return f"{zone_id}_s{idx:02d}"
+    def _sid(zone_id, table_idx, seat_idx):
+        return f"{zone_id}_t{table_idx:02d}_s{seat_idx:02d}"
 
     def ensure_seats(self):
         """Create SeatState for every seat in zones."""
         for z in self.zones:
-            for idx, seats in enumerate(z["seats"]):
-                for _ in seats:
-                    sid = self._sid(z["id"], idx)
-                    if sid not in self.states:
-                        self.states[sid] = SeatState()
+            for ti, table in enumerate(z["seats"]):
+                for si, _ in enumerate(table):
+                    self.states.setdefault(self._sid(z["id"], ti, si), SeatState())
 
     def process_frame(self, tracks, zone):
-        """Update states from tracked persons. Returns per-seat result dicts."""
-        results = {}
-        occupied_sids = set()
-
+        """Update the zone's seats from tracked persons. Returns per-seat result dicts."""
+        seats = [(self._sid(zone["id"], ti, si), seat["vertices"])
+                 for ti, table in enumerate(zone["seats"])
+                 for si, seat in enumerate(table)]
+        persons = {sid: 0 for sid, _ in seats}
         for _, box in tracks:
             cx, cy = bbox_bottom_center(box)
-            if point_in_polygon(cx, cy, zone["vertices"]):
-                for idx in range(len(zone["seats"])):
-                    sid = self._sid(zone["id"], idx)
-                    occupied_sids.add(sid)
+            # Each person takes at most one seat, the first polygon that contains them.
+            for sid, poly in seats:
+                if point_in_polygon(cx, cy, poly):
+                    persons[sid] += 1
+                    break
 
-        for z in self.zones:
-            if z["id"] != zone["id"]:
-                continue
-            for idx, seat_ids in enumerate(z["seats"]):
-                for si in range(len(seat_ids)):
-                    sid = f"{zone['id']}_s{idx:02d}"
-                    state = self.states.get(sid)
-                    if state is None:
-                        state = SeatState()
-                        self.states[sid] = state
-
-                    has_person = sid in occupied_sids
-                    was_occupied = state.status == SeatState.OCCUPIED
-
-                    if has_person:
-                        state.count += 1
-                        state.last_seen = time.time()
-                        if state.status == SeatState.EMPTY:
-                            state.status = SeatState.CONFIRMING
-                            state.confirm_frames = 1
-                        elif state.status == SeatState.CONFIRMING:
-                            state.confirm_frames += 1
-                            if state.confirm_frames >= self.conf_frames:
-                                state.status = SeatState.OCCUPIED
-                                state.duration_s = 0.0
-                                print(f"  [着席] {sid}")
-                        elif state.status == SeatState.LEAVE_CONFIRM:
-                            state.status = SeatState.CONFIRMING
-                            state.confirm_frames = 1
-                            state.leave_start = None
-                            print(f"  [復帰] {sid}")
-                    else:
-                        if was_occupied:
-                            state.status = SeatState.LEAVE_CONFIRM
-                            state.leave_start = time.time()
-                            print(f"  [離席確認] {sid}")
-                        elif state.status == SeatState.CONFIRMING:
-                            state.status = SeatState.EMPTY
-                            state.confirm_frames = 0
-                        # LEAVE_CONFIRM stays until grace expires
-
-                    if state.status == SeatState.OCCUPIED:
-                        state.duration_s += 1.0
-                    elif state.status == SeatState.LEAVE_CONFIRM and state.leave_start:
-                        elapsed = time.time() - state.leave_start
-                        if elapsed > self.leave_grace_s:
-                            state.status = SeatState.EMPTY
-                            state.count = 0
-                            state.duration_s = 0.0
-                            print(f"  [空席] {sid}")
-
-                    results[sid] = state.to_dict()
-
+        now = time.time()
+        results = {}
+        for sid, _ in seats:
+            state = self.states.setdefault(sid, SeatState())
+            state.count = persons[sid]
+            if persons[sid]:
+                state.last_seen = now
+                if state.status == SeatState.EMPTY:
+                    state.status = SeatState.CONFIRMING
+                    state.confirm_frames = 1
+                elif state.status == SeatState.CONFIRMING:
+                    state.confirm_frames += 1
+                if state.status == SeatState.CONFIRMING and state.confirm_frames >= self.conf_frames:
+                    state.status = SeatState.OCCUPIED
+                    state.occupied_since = now
+                    print(f"  [着席] {sid}")
+                elif state.status == SeatState.LEAVE_CONFIRM:
+                    # Back within the grace period: still the same guest.
+                    state.status = SeatState.OCCUPIED
+                    state.leave_start = None
+                    print(f"  [復帰] {sid}")
+            elif state.status == SeatState.OCCUPIED:
+                state.status = SeatState.LEAVE_CONFIRM
+                state.leave_start = now
+                print(f"  [離席確認] {sid}")
+            elif state.status == SeatState.CONFIRMING:
+                # Disappeared before confirmation: someone passing by.
+                state.status = SeatState.EMPTY
+                state.confirm_frames = 0
+            elif (state.status == SeatState.LEAVE_CONFIRM
+                  and now - state.leave_start > self.leave_grace_s):
+                print(f"  [空席] {sid} 利用 {state.duration_s:.0f}秒")
+                state.status = SeatState.EMPTY
+                state.occupied_since = None
+                state.leave_start = None
+            results[sid] = state.to_dict()
         return results
 
 
@@ -336,17 +359,12 @@ class DashboardServer(threading.Thread):
     def run(self):
         import http.server
         import socketserver
+        state_source, html = self._state_source, self._html()
 
         class H(http.server.BaseHTTPRequestHandler):
             def do_GET(self):
                 if self.path == "/api/state":
-                    snap = {}
-                    try:
-                        snap = {sid: st.to_dict() for sid, st in
-                                (self._state_source() or {}).items()}
-                    except Exception:
-                        pass
-                    data = json.dumps(snap)
+                    data = json.dumps(state_source() if state_source else {})
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
@@ -355,7 +373,7 @@ class DashboardServer(threading.Thread):
                     self.send_response(200)
                     self.send_header("Content-Type", "text/html; charset=utf-8")
                     self.end_headers()
-                    self.wfile.write(self._html().encode())
+                    self.wfile.write(html.encode())
                 else:
                     self.send_response(404)
                     self.end_headers()
@@ -399,43 +417,29 @@ setTimeout(u,2000)};}u();</script>
 
 
 # ---------------------------------------------------------------------------
-# Mock loop (for testing without camera)
+# Main loop
 # ---------------------------------------------------------------------------
 
-def _run_mock(config, duration_s=10):
-    """Run with mock camera frames."""
-    zones = config.get("zones", [])
-    thresh = config.get("thresholds", {})
-    tracker = OccupancyTracker(
-        zones,
-        conf_frames=thresh.get("confirm_frames", 3),
-        leave_grace_s=thresh.get("leave_grace_s", 10.0))
-    tracker.ensure_seats()
-    cloud = CloudSync(device_id="pi-mock")
-    cam = Camera(width=640, height=480)
-
+def run(cams, zones, detector, tracker, cloud, duration_s=None, interval_s=1.0,
+        high_score=0.5):
+    """Every interval: each camera's frame → persons → its own tracker → its zones' seats.
+    cams: [(camera_id, Camera)]. duration_s=None runs until interrupted."""
+    trackers = {cid: ByteTrack(high=high_score) for cid, _ in cams}   # tracks live across frames
+    zones_of = {cid: [z for z in zones if z.get("camera") == cid] for cid, _ in cams}
     start = time.time()
     frames = 0
-    while time.time() - start < duration_s:
-        frame = cam.read_frame()
-        dets = detect(frame, conf=thresh.get("confidence", 0.5))
-        if zones:
-            z = zones[0]
-            tracks = ByteTrack().update(dets)
-            results = tracker.process_frame(tracks, z)
-            cloud.submit(results)
-
-            frames += 1
-            if frames % 3 == 0:
-                print(f"\n--- Frame {frames} ---")
-                for sid, st in sorted(results.items()):
-                    if st["status"] != "empty":
-                        print(f"  {sid}: {st['status']} dur={st['duration_s']}s")
-
+    while duration_s is None or time.time() - start < duration_s:
+        t0 = time.time()
+        for cid, cam in cams:
+            tracks = trackers[cid].update(detector(cam.read_frame()))
+            for z in zones_of[cid]:
+                cloud.submit(tracker.process_frame(tracks, z))
         cloud.heartbeat()
-        time.sleep(1.0)
-
-    print(f"\nMock loop done: {frames} frames")
+        frames += len(cams)
+        if frames % 10 == 0:
+            print(f"  {frames} frames processed")
+        time.sleep(max(0.0, interval_s - (time.time() - t0)))
+    return frames
 
 
 # ---------------------------------------------------------------------------
@@ -468,43 +472,36 @@ def main(argv=None):
     cloud = CloudSync(
         api_url=cloud_cfg.get("api_url"),
         token=cloud_cfg.get("token"),
-        device_id="pi1")
+        device_id="pi-mock" if args.mock else "pi1")
+
+    cam_cfgs = config.get("cameras", [])
+    if not cam_cfgs:
+        print("カメラなし。設定にカメラを登録してください。")
+        return
+    if args.mock:
+        cams = [(c["id"], Camera(width=640, height=480)) for c in cam_cfgs]
+        detector = MockDetector(zones)
+    else:
+        cams = [(c["id"], Camera(
+            device=c.get("device", "/dev/video0"),
+            width=c.get("resolution", [1920, 1080])[0],
+            height=c.get("resolution", [1920, 1080])[1])) for c in cam_cfgs]
+        detector = Detector()
 
     snap = lambda: {sid: st.to_dict() for sid, st in tracker.states.items()}
     srv = DashboardServer(port=args.dashboard_port, state_source=snap)
     srv.start()
 
     try:
-        if args.mock:
-            _run_mock(config, duration_s=args.duration)
-        else:
-            cams = [Camera(
-                device=int(c.get("device", 0).replace("/dev/video", "")),
-                width=c.get("resolution", [1920, 1080])[0],
-                height=c.get("resolution", [1920, 1080])[1])
-                    for c in config.get("cameras", [])]
-            if not cams:
-                print("カメラなし。--mock でテストしてください。")
-                return
-
-            frames = 0
-            while True:
-                for cam in cams:
-                    frame = cam.read_frame()
-                    dets = detect(frame, conf=thresh.get("confidence", 0.5))
-                    for z in zones:
-                        tracks = ByteTrack().update(dets)
-                        results = tracker.process_frame(tracks, z)
-                        cloud.submit(results)
-                cloud.heartbeat()
-                frames += len(cams)
-                if frames % 10 == 0:
-                    print(f"  {frames} frames processed")
-                time.sleep(1.0)
+        run(cams, zones, detector, tracker, cloud,
+            duration_s=args.duration if args.mock else None,
+            high_score=thresh.get("confidence", 0.5))
     except KeyboardInterrupt:
         pass
     finally:
         srv.stop()
+        for _, cam in cams:
+            cam.release()
         print("\nStopped.")
 
 

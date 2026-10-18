@@ -80,7 +80,6 @@ export const zhTW: Dict = {
   'field.height': '高度 (px)',
   'field.resolution': '解析度',
   'field.description': '說明',
-  'field.vertices': '頂點 [x, y]',
   'field.seats': '桌與座位',
   'field.tablesSeats': '桌 / 座位',
 
@@ -195,6 +194,7 @@ export const zhTW: Dict = {
   'dashboard.emptyDesc':
     '登錄裝置、攝影機與區域後，桌位使用狀況就會顯示在這裡。',
   'dashboard.registerDevice': '登錄裝置',
+  'dashboard.seated': '{n}/{total} 席入座',
   'time.minutes': '{m} 分鐘',
   'time.hoursMinutes': '{h} 小時 {m} 分',
 
@@ -227,9 +227,8 @@ export const zhTW: Dict = {
   'cameras.desc': '連接到各裝置的 USB 攝影機。',
   'zones.desc': '攝影機畫面上的座位區域（多邊形），以及其中的桌與座位。',
   'zones.descPlaceholder': '雙人座（面對面）× 4 桌',
-  'zones.verticesHint': '攝影機畫面的像素座標，至少 3 個點。',
   'zones.seatsHint':
-    '一桌 = 座位名稱的陣列。main.py 會將第 i 桌以「區域ID_s0i」回報。',
+    '貼上 draw_zones.py 的輸出。一桌 = 座位的陣列；座位 = 名稱與攝影機畫面上的多邊形（像素座標 [x, y]，至少 3 個點）。main.py 會將第 i 桌第 j 個座位以「區域ID_tii_sjj」回報。',
   'zones.count': '{tables} 桌 / {seats} 個座位',
 
   'thresholds.desc':

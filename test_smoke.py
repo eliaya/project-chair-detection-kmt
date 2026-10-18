@@ -54,47 +54,6 @@ class TestBBoxCenter(unittest.TestCase):
 
 
 class TestSeatState(unittest.TestCase):
-    """Per-seat state machine transitions."""
-
-    def test_empty_to_confirming(self):
-        from main import SeatState
-        s = SeatState()
-        self.assertEqual(s.status, SeatState.EMPTY)
-        s.status = SeatState.CONFIRMING
-        self.assertEqual(s.status, SeatState.CONFIRMING)
-
-    def test_confirming_to_occupied(self):
-        from main import SeatState
-        s = SeatState()
-        s.status = SeatState.CONFIRMING
-        s.confirm_frames = 3
-        if s.confirm_frames >= 3:
-            s.status = SeatState.OCCUPIED
-            s.duration_s = 0.0
-        self.assertEqual(s.status, SeatState.OCCUPIED)
-
-    def test_occupied_to_leave_confirm(self):
-        from main import SeatState
-        s = SeatState()
-        s.status = SeatState.OCCUPIED
-        s.status = SeatState.LEAVE_CONFIRM
-        s.leave_start = time.time()
-        self.assertEqual(s.status, SeatState.LEAVE_CONFIRM)
-
-    def test_leave_confirm_to_empty(self):
-        from main import SeatState
-        s = SeatState()
-        s.status = SeatState.OCCUPIED
-        s.status = SeatState.LEAVE_CONFIRM
-        s.leave_start = time.time() - 11  # > 10s ago
-        elapsed = time.time() - s.leave_start
-        self.assertGreater(elapsed, 10.0)
-        if elapsed > 10.0:
-            s.status = SeatState.EMPTY
-            s.count = 0
-            s.duration_s = 0.0
-        self.assertEqual(s.status, SeatState.EMPTY)
-
     def test_to_dict(self):
         from main import SeatState
         s = SeatState()
@@ -105,85 +64,114 @@ class TestSeatState(unittest.TestCase):
         self.assertIn("last_seen_s", d)
 
 
+def seat_box(poly):
+    """A person box whose lower-body point is the centre of poly."""
+    cx = sum(p[0] for p in poly) / len(poly)
+    cy = sum(p[1] for p in poly) / len(poly)
+    return [cx - 50, cy - 140 * 0.67, 100, 140]
+
+
+SQ = lambda x: [[x, 0], [x + 100, 0], [x + 100, 100], [x, 100]]
+ZONE = {"id": "z1", "camera": "cam1", "seats": [
+    [{"name": "A1", "vertices": SQ(0)}, {"name": "A2", "vertices": SQ(100)}],
+    [{"name": "B1", "vertices": SQ(200)}],
+]}
+
+
 class TestOccupancyTracker(unittest.TestCase):
-    """Full occupancy tracker state transitions."""
+    """Per-seat state machine, driven through OccupancyTracker."""
 
     def setUp(self):
-        from main import OccupancyTracker, SeatState
-        zones = [{
-            "id": "z1",
-            "camera": "cam1",
-            "vertices": [[0, 0], [200, 0], [200, 200], [0, 200]],
-            "seats": [["s1"], ["s2"]],
-        }]
-        self.tracker = OccupancyTracker(zones, conf_frames=3, leave_grace_s=2.0)
-
-    def test_ensure_seats_created(self):
-        self.tracker.ensure_seats()
-        sids = sorted(self.tracker.states.keys())
-        self.assertIn("z1_s00", sids)
-        self.assertIn("z1_s01", sids)
-
-    def test_state_machine_empty_to_occupied(self):
-        """Person always in zone → empty → confirming → occupied."""
-        from main import OccupancyTracker, SeatState
-        # Frame with person inside zone
-        tracks = [("p0", [50, 50, 100, 100])]  # bbox fully inside
-        results = self.tracker.process_frame(tracks, self.tracker.zones[0])
-
-        # After first detection: confirming
-        for sid in ["z1_s00", "z1_s01"]:
-            if sid in results:
-                self.assertEqual(results[sid]["status"], SeatState.CONFIRMING)
-
-    def test_state_machine_occupied_to_leave(self):
-        """Person disappears → occupied → leave_confirm → empty."""
-        from main import OccupancyTracker, SeatState
-        tracks = [("p0", [50, 50, 100, 100])]
+        from main import OccupancyTracker
+        self.tracker = OccupancyTracker([ZONE], conf_frames=3, leave_grace_s=10.0)
         self.tracker.ensure_seats()
 
-        # Fill confirming frames to reach occupied
+    def frame(self, *seat_polys):
+        tracks = [(i, seat_box(p)) for i, p in enumerate(seat_polys)]
+        return self.tracker.process_frame(tracks, ZONE)
+
+    def test_seat_ids(self):
+        self.assertEqual(sorted(self.tracker.states),
+                         ["z1_t00_s00", "z1_t00_s01", "z1_t01_s00"])
+
+    def test_only_the_seat_with_the_person_changes(self):
+        r = self.frame(SQ(100))
+        self.assertEqual(r["z1_t00_s01"]["status"], "confirming")
+        self.assertEqual(r["z1_t00_s00"]["status"], "empty")
+        self.assertEqual(r["z1_t01_s00"]["status"], "empty")
+
+    def test_seated_after_three_frames(self):
+        statuses = [self.frame(SQ(0))["z1_t00_s00"]["status"] for _ in range(3)]
+        self.assertEqual(statuses, ["confirming", "confirming", "occupied"])
+
+    def test_passer_by_does_not_occupy(self):
+        self.frame(SQ(0))
+        self.assertEqual(self.frame()["z1_t00_s00"]["status"], "empty")
+
+    def test_back_within_grace_stays_occupied(self):
         for _ in range(3):
-            results = self.tracker.process_frame(tracks, self.tracker.zones[0])
+            self.frame(SQ(0))
+        self.assertEqual(self.frame()["z1_t00_s00"]["status"], "leave_confirm")
+        self.assertEqual(self.frame(SQ(0))["z1_t00_s00"]["status"], "occupied")
 
-        # Now remove person
-        empty_tracks = []
-        results = self.tracker.process_frame(empty_tracks, self.tracker.zones[0])
+    def test_empty_after_grace(self):
+        for _ in range(3):
+            self.frame(SQ(0))
+        self.frame()
+        self.tracker.states["z1_t00_s00"].leave_start -= 11
+        r = self.frame()
+        self.assertEqual(r["z1_t00_s00"]["status"], "empty")
+        self.assertEqual(r["z1_t00_s00"]["duration_s"], 0.0)
 
-        # Should be in leave_confirm or empty depending on grace
-        for sid in ["z1_s00", "z1_s01"]:
-            if sid in results:
-                status = results[sid]["status"]
-                self.assertIn(status, [SeatState.LEAVE_CONFIRM, SeatState.EMPTY])
+    def test_person_counts_for_one_seat_only(self):
+        from main import OccupancyTracker
+        overlap = {"id": "z2", "camera": "cam1", "seats": [
+            [{"name": "X", "vertices": SQ(0)}, {"name": "Y", "vertices": SQ(0)}]]}
+        t = OccupancyTracker([overlap])
+        r = t.process_frame([(0, seat_box(SQ(0)))], overlap)
+        self.assertEqual([r["z2_t00_s00"]["count"], r["z2_t00_s01"]["count"]], [1, 0])
 
 
 class TestByteTrack(unittest.TestCase):
-    """IoU matching and age tracking."""
-
     def test_no_detections(self):
         from main import ByteTrack
-        bt = ByteTrack()
-        tracks = bt.update([])
-        self.assertEqual(len(tracks), 0)
+        self.assertEqual(ByteTrack().update([]), [])
 
-    def test_single_track_persists(self):
+    def test_same_person_keeps_id_across_frames(self):
         from main import ByteTrack
-        bt = ByteTrack(max_age=3, min_hits=1)
-        det = [[100, 100, 50, 50]]
-        tracks = bt.update(det)
-        self.assertGreaterEqual(len(tracks), 0)  # May have track
+        bt = ByteTrack()
+        ids = [bt.update([[100 + i * 5, 100, 50, 100, 0.9]])[0][0] for i in range(10)]
+        self.assertEqual(len(set(ids)), 1)
+
+    def test_low_score_box_keeps_track_but_does_not_start_one(self):
+        from main import ByteTrack
+        bt = ByteTrack(high=0.5, low=0.1)
+        tid = bt.update([[100, 100, 50, 100, 0.9]])[0][0]
+        self.assertEqual(bt.update([[102, 100, 50, 100, 0.2]]), [(tid, [102, 100, 50, 100])])
+        self.assertEqual(bt.update([[500, 100, 50, 100, 0.2]]), [])
+
+    def test_lost_track_is_rematched(self):
+        from main import ByteTrack
+        bt = ByteTrack(max_lost=5)
+        tid = bt.update([[100, 100, 50, 100, 0.9]])[0][0]
+        bt.update([])
+        bt.update([])
+        self.assertEqual(bt.update([[100, 100, 50, 100, 0.9]])[0][0], tid)
+
+    def test_two_people_two_ids(self):
+        from main import ByteTrack
+        bt = ByteTrack()
+        bt.update([[0, 0, 50, 100, 0.9], [300, 0, 50, 100, 0.9]])
+        tracks = bt.update([[2, 0, 50, 100, 0.9], [302, 0, 50, 100, 0.9]])
+        self.assertEqual(sorted(tid for tid, _ in tracks), [0, 1])
 
     def test_iou_self(self):
         from main import ByteTrack
-        a = [0, 0, 100, 100]
-        b = [0, 0, 100, 100]
-        self.assertAlmostEqual(ByteTrack._iou(a, b), 1.0)
+        self.assertAlmostEqual(ByteTrack._iou([0, 0, 100, 100], [0, 0, 100, 100]), 1.0)
 
     def test_iou_disjoint(self):
         from main import ByteTrack
-        a = [0, 0, 50, 50]
-        b = [100, 100, 50, 50]
-        self.assertAlmostEqual(ByteTrack._iou(a, b), 0.0)
+        self.assertAlmostEqual(ByteTrack._iou([0, 0, 50, 50], [100, 100, 50, 50]), 0.0)
 
 
 class TestCloudSync(unittest.TestCase):
@@ -301,63 +289,45 @@ class TestConfigURL(unittest.TestCase):
         self.assertIn("zones", cfg)
 
 
-class TestIntegration(unittest.TestCase):
-    """End-to-end: detect → track → zone check → state update."""
+class TestRun(unittest.TestCase):
+    """main.run(): tracks persist across frames; cameras only feed their own zones."""
 
-    def test_full_pipeline(self):
-        """Person in zone bbox → state transitions through confirming → occupied."""
-        from main import (OccupancyTracker, ByteTrack, SeatState,
-                          point_in_polygon, bbox_bottom_center)
-        from utils import load_config
-        import os
-
-        config_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "config.json")
-        if not os.path.exists(config_path):
-            self.skipTest("config.json not found")
-
-        cfg = load_config(config_path)
-        zones = cfg["zones"][:1]  # First zone only
-        thresh = cfg.get("thresholds", {})
-
-        tracker = OccupancyTracker(
-            zones,
-            conf_frames=thresh.get("confirm_frames", 3),
-            leave_grace_s=thresh.get("leave_grace_s", 10.0))
+    def test_seats_get_occupied_through_the_loop(self):
+        from main import run, OccupancyTracker, CloudSync, Camera
+        other = {"id": "z9", "camera": "cam2", "seats": [[{"name": "C1", "vertices": SQ(0)}]]}
+        tracker = OccupancyTracker([ZONE, other], conf_frames=3)
         tracker.ensure_seats()
+        cloud = CloudSync(device_id="t")
+        detector = lambda frame: [seat_box(SQ(0))]   # someone always on A1
+        run([("cam1", Camera(width=4, height=4))], [ZONE, other], detector,
+            tracker, cloud, duration_s=0.3, interval_s=0.05)
+        self.assertEqual(tracker.states["z1_t00_s00"].status, "occupied")
+        self.assertEqual(tracker.states["z1_t00_s01"].status, "empty")
+        # cam2 is not running, so its zone is untouched even though the box overlaps C1.
+        self.assertEqual(tracker.states["z9_t00_s00"].status, "empty")
 
-        # Simulate person in zone center
-        z = zones[0]
-        verts = z["vertices"]
-        avg_x = sum(v[0] for v in verts) / len(verts)
-        avg_y = sum(v[1] for v in verts) / len(verts)
-        tracks = [("p0", [avg_x - 50, avg_y - 60, 100, 120])]
+    def test_mock_detector_sits_on_configured_seats(self):
+        from main import MockDetector, OccupancyTracker
+        dets = MockDetector([ZONE], period_s=1e9)(None)   # frozen schedule
+        tracker = OccupancyTracker([ZONE])
+        r = tracker.process_frame(list(enumerate(dets)), ZONE)
+        self.assertEqual(sum(v["count"] for v in r.values()), len(dets))
 
-        # First frame: should enter CONFIRMING
-        results = tracker.process_frame(tracks, z)
-        for sid in tracker.states:
-            if tracker.states[sid].status == SeatState.CONFIRMING:
+
+class TestDashboardServer(unittest.TestCase):
+    def test_state_endpoint(self):
+        import urllib.request
+        from main import DashboardServer
+        srv = DashboardServer(port=0, state_source=lambda: {"s": {"status": "occupied"}})
+        srv.start()
+        for _ in range(100):
+            if srv._server:
                 break
-        else:
-            self.fail("No seat entered CONFIRMING state")
-
-    def test_no_person_in_zone(self):
-        """Empty zone → states should remain empty."""
-        from main import OccupancyTracker, SeatState
-        zones = [{
-            "id": "z2",
-            "camera": "cam1",
-            "vertices": [[0, 0], [100, 0], [100, 100], [0, 100]],
-            "seats": [["s1"]],
-        }]
-
-        tracker = OccupancyTracker(zones)
-        tracker.ensure_seats()
-
-        # Empty zone (no tracks)
-        results = tracker.process_frame([], zones[0])
-        self.assertEqual(results.get("z2_s00", {}).get("status"), SeatState.EMPTY)
+            time.sleep(0.01)
+        port = srv._server.server_address[1]
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/state", timeout=5) as r:
+            self.assertEqual(json.load(r), {"s": {"status": "occupied"}})
+        srv.stop()
 
 
 if __name__ == "__main__":

@@ -112,17 +112,11 @@ export const resources = {
         placeholder: 'zones.descPlaceholder',
       },
       {
-        name: 'vertices',
-        label: 'field.vertices',
-        type: 'json',
-        placeholder: '[[100, 100], [600, 80], [620, 350], [80, 370]]',
-        description: 'zones.verticesHint',
-      },
-      {
         name: 'seats',
         label: 'field.seats',
         type: 'json',
-        placeholder: '[["A01", "A02"], ["A03", "A04"]]',
+        placeholder:
+          '[[{"name": "A01", "vertices": [[100, 300], [300, 300], [300, 500], [100, 500]]}]]',
         description: 'zones.seatsHint',
       },
     ],
@@ -135,7 +129,7 @@ export const resources = {
         key: 'seats',
         title: 'field.tablesSeats',
         format: (v, _, { t }) => {
-          const tables = v as string[][]
+          const tables = v as unknown[][]
           return t('zones.count', {
             tables: tables.length,
             seats: tables.flat().length,

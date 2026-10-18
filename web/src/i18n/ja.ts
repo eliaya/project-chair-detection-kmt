@@ -80,7 +80,6 @@ export const ja: Dict = {
   'field.height': '高さ (px)',
   'field.resolution': '解像度',
   'field.description': '説明',
-  'field.vertices': '頂点 [x, y]',
   'field.seats': '卓と座席',
   'field.tablesSeats': '卓 / 座席',
 
@@ -201,6 +200,7 @@ export const ja: Dict = {
   'dashboard.emptyDesc':
     'デバイス・カメラ・ゾーンを登録すると、卓の稼働状況がここに表示されます。',
   'dashboard.registerDevice': 'デバイスを登録',
+  'dashboard.seated': '{n}/{total}席 着席',
   'time.minutes': '{m}分',
   'time.hoursMinutes': '{h}時間{m}分',
 
@@ -236,9 +236,8 @@ export const ja: Dict = {
   'cameras.desc': '各デバイスに接続された USB カメラです。',
   'zones.desc': 'カメラ画像上の座席区域（多角形）と、その中の卓・座席です。',
   'zones.descPlaceholder': '2人席（向かい合わせ）× 4テーブル',
-  'zones.verticesHint': 'カメラ画像のピクセル座標。3点以上。',
   'zones.seatsHint':
-    '1卓 = 座席名の配列。main.py は i 番目の卓を「ゾーンID_s0i」として送信します。',
+    'draw_zones.py の出力を貼り付けます。1卓 = 座席の配列、座席 = 名前とカメラ画像上の多角形（ピクセル座標 [x, y]、3点以上）。main.py は i 番目の卓の j 番目の座席を「ゾーンID_tii_sjj」として送信します。',
   'zones.count': '{tables}卓 / {seats}席',
 
   'thresholds.desc':

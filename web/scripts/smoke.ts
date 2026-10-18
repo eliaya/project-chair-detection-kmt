@@ -59,19 +59,21 @@ assert.equal((await call('POST', '/api/cameras', cam)).status, 201)
 assert.equal((await call('POST', '/api/cameras', cam)).status, 409)
 assert.equal((await call('POST', '/api/cameras', { ...cam, id: 'smoke-cam2', device_id: 'nope' })).status, 409)
 assert.equal((await call('POST', '/api/cameras', { ...cam, device_path: 'video0' })).status, 400)
-const zone = { id: 'smoke-zone', camera_id: 'smoke-cam', description: 'x', vertices: [[0, 0], [100, 0], [100, 100]], seats: [['S1', 'S2'], ['S3']] }
+const sq = (x: number) => [[x, 0], [x + 100, 0], [x + 100, 100], [x, 100]]
+const zone = { id: 'smoke-zone', camera_id: 'smoke-cam', description: 'x', seats: [[{ name: 'S1', vertices: sq(0) }, { name: 'S2', vertices: sq(100) }], [{ name: 'S3', vertices: sq(200) }]] }
 assert.equal((await call('POST', '/api/zones', zone)).status, 201)
 assert.equal((await call('PUT', '/api/zones/smoke-zone', { ...zone, description: 'edited' })).status, 200)
 const zones = (await call('GET', '/api/zones')).data
 assert.deepEqual(zones.find((z: { id: string }) => z.id === 'smoke-zone'), { ...zone, description: 'edited' })
 assert.equal((await call('PUT', '/api/zones/missing', zone)).status, 404)
+assert.equal((await call('POST', '/api/zones', { ...zone, id: 'smoke-zone2', seats: [[{ name: 'S1', vertices: [[0, 0], [1, 1]] }]] })).status, 400)
 assert.equal((await call('DELETE', '/api/devices/smoke-pi')).status, 409)
 step('device / camera / zone CRUD, duplicate, FK and validation errors')
 
 assert.equal((await call('GET', '/api/config', undefined, 'bad-token')).status, 401)
 const cfg = (await call('GET', '/api/config', undefined, dev.data.token)).data
 assert.deepEqual(cfg.cameras, [{ id: 'smoke-cam', device: '/dev/video0', fps: 1, resolution: [1920, 1080] }])
-assert.deepEqual(cfg.zones, [{ id: 'smoke-zone', camera: 'smoke-cam', description: 'edited', vertices: zone.vertices, seats: zone.seats }])
+assert.deepEqual(cfg.zones, [{ id: 'smoke-zone', camera: 'smoke-cam', description: 'edited', seats: zone.seats }])
 assert.equal(typeof cfg.thresholds.confidence, 'number')
 assert.equal(cfg.cloud.api_url, `${base}/api/occupancy`)
 step('device config has config.json shape')
@@ -79,7 +81,7 @@ step('device config has config.json shape')
 const post = (occupancy: object, timestamp: string) =>
   call('POST', '/api/occupancy', { device_id: 'ignored', timestamp, occupancy }, dev.data.token)
 const now = new Date().toISOString().replace('Z', '+00:00')
-const s0 = 'smoke-zone_s00', s1 = 'smoke-zone_s01'
+const s0 = 'smoke-zone_t00_s00', s1 = 'smoke-zone_t00_s01'
 assert.equal((await post({ [s0]: { status: 'occupied', count: 3 }, [s1]: { status: 'empty' } }, now)).data.changed, 2)
 assert.equal((await post({ [s0]: { status: 'occupied', count: 4 }, [s1]: { status: 'empty' } }, now)).data.changed, 0)
 const hourAgo = new Date(Date.now() - 3600_000).toISOString()

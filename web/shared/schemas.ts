@@ -49,18 +49,22 @@ export const cameraSchema = z.object({
   height: z.number().int().min(120).max(4320),
 })
 
+// A seat is taken when a person's lower-body point falls in its polygon
+// (camera image pixels, drawn with draw_zones.py).
+const seat = z.object({
+  name: z.string().trim().min(1).max(16),
+  vertices: z
+    .array(z.tuple([z.number(), z.number()]))
+    .min(3, 'validation.verticesMin')
+    .max(32),
+})
+
 export const zoneSchema = z.object({
   id,
   camera_id: id,
   description: z.string().trim().max(200),
-  vertices: z
-    .array(z.tuple([z.number(), z.number()]))
-    .min(3, 'validation.verticesMin')
-    .max(64),
-  seats: z
-    .array(z.array(z.string().trim().min(1).max(16)).min(1).max(16))
-    .min(1)
-    .max(100),
+  // One array per table; main.py reports seat j of table i as "<zone id>_t<ii>_s<jj>".
+  seats: z.array(z.array(seat).min(1).max(16)).min(1).max(100),
 })
 
 export const thresholdsSchema = z.object({
