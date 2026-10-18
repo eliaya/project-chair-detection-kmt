@@ -44,19 +44,23 @@ def check_zone_membership(cx, cy, zones):
     return results
 
 
-def load_config(path="config.json"):
+def load_config(path="config.json", cache_path="config.cache.json"):
     """Load config from JSON file, or from an http(s) URL (the Workers
     GET /api/config, authorized with $API_TOKEN). Override with env vars if set.
-    A failed fetch falls back to the local config.json."""
+    A fetched config is cached, so a Pi that boots offline keeps its real seats;
+    without a cache a failed fetch falls back to the local config.json."""
     filepath = os.environ.get("CONFIG_PATH", path)
     if filepath.startswith(("http://", "https://")):
         req = urllib.request.Request(filepath, headers={
             "Authorization": f"Bearer {os.environ.get('API_TOKEN', '')}"})
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
-                return json.load(resp)
+                config = json.load(resp)
+            with open(cache_path, "w") as f:
+                json.dump(config, f)
+            return config
         except (OSError, ValueError) as e:
-            print(f"  [config] {filepath} 取得失敗 ({e}) → config.json を使用")
-            filepath = "config.json"
+            filepath = cache_path if os.path.exists(cache_path) else "config.json"
+            print(f"  [config] {req.full_url} 取得失敗 ({e}) → {filepath} を使用")
     with open(filepath) as f:
         return json.load(f)

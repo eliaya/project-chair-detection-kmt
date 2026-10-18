@@ -1,0 +1,5 @@
+# main.py on the Raspberry Pi. Install ncnn separately with --no-deps
+# (scripts/install_pi.sh): it declares opencv-python, the GUI build, which needs
+# libGL on Pi OS Lite and clashes with the headless build below.
+numpy
+opencv-python-headless

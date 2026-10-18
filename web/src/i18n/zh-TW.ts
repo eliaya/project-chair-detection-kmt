@@ -238,8 +238,11 @@ export const zhTW: Dict = {
   'thresholds.confirmFramesHint': '約每秒 1 次；3 代表約 3 秒後判定入座。',
   'thresholds.leaveGrace': '離席緩衝時間 (秒)',
   'thresholds.staffAspect': '店員判定：長寬比',
-  'thresholds.staffSpeed': '店員判定：移動速度 (px)',
-  'thresholds.unused': '目前的 main.py 未使用。',
+  'thresholds.staffSpeed': '店員判定：移動速度 (px/秒)',
+  'thresholds.staffAspectHint':
+    '人物框的高度÷寬度超過此值的人（站立者）不視為入座。',
+  'thresholds.staffSpeedHint':
+    '下半身移動速度（像素/秒）超過此值的人不視為入座。',
 
   'site.desc': '監控的店舗或場所名稱，會顯示在管理後台的側邊欄。',
   'site.name': '站點名稱',

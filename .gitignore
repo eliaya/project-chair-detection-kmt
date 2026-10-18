@@ -1,0 +1,8 @@
+__pycache__/
+.DS_Store
+.venv*/
+# Exported by scripts/export_model.sh, copied to each Pi
+models/
+# Runtime state of main.py
+queue.db
+config.cache.json

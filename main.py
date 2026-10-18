@@ -1,5 +1,5 @@
 """テーブル稼働監視 main program.
-YOLOv8n + ByteTrack で人物検出・追跡 → 座席区域判定 → 状態マシン → Cloudflare Workers 送信
+YOLO26n (NCNN) + ByteTrack で人物検出・追跡 → 座席区域判定 → 状態マシン → Cloudflare Workers 送信
 """
 
 import argparse
@@ -8,7 +8,9 @@ import math
 import time
 import threading
 import os
-from collections import deque
+import sqlite3
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 
 from utils import load_config, point_in_polygon, bbox_bottom_center
@@ -71,22 +73,46 @@ class Camera:
 # ---------------------------------------------------------------------------
 
 class Detector:
-    """Person detection. The model is loaded once, not per frame."""
+    """YOLO26n person detection on NCNN (no PyTorch on the Pi). The model is loaded
+    once; export it on the dev PC with scripts/export_model.sh."""
 
-    def __init__(self, conf=0.1):
-        from ultralytics import YOLO
+    def __init__(self, model_dir="models/yolo26n_ncnn_model", conf=0.1, iou=0.7,
+                 imgsz=640, threads=4):
+        import ncnn
+        if not os.path.exists(os.path.join(model_dir, "model.ncnn.param")):
+            raise SystemExit(f"{model_dir} がありません。開発PCで scripts/export_model.sh を実行し、Pi にコピーしてください。")
         self.conf = conf   # low on purpose: ByteTrack uses the low-score boxes too
-        self._model = YOLO("yolov8n.pt")
+        self.iou = iou
+        self.imgsz = imgsz
+        self._ncnn = ncnn
+        self._net = ncnn.Net()
+        self._net.opt.num_threads = threads
+        self._net.load_param(os.path.join(model_dir, "model.ncnn.param"))
+        self._net.load_model(os.path.join(model_dir, "model.ncnn.bin"))
 
     def __call__(self, frame):
-        """Returns [[x, y, w, h, score], ...] of persons."""
-        results = self._model(frame, conf=self.conf, verbose=False)
-        dets = []
-        for b in results[0].boxes:
-            if int(b.cls.item()) == 0:
-                x1, y1, x2, y2 = b.xyxy[0].tolist()
-                dets.append([x1, y1, x2 - x1, y2 - y1, float(b.conf.item())])
-        return dets
+        """frame: BGR image. Returns [[x, y, w, h, score], ...] of persons."""
+        import cv2
+        import numpy as np
+        h, w = frame.shape[:2]
+        r = min(self.imgsz / h, self.imgsz / w)
+        nh, nw = round(h * r), round(w * r)
+        top, left = (self.imgsz - nh) // 2, (self.imgsz - nw) // 2
+        # Letterbox like Ultralytics: keep the aspect ratio, pad with gray.
+        canvas = np.full((self.imgsz, self.imgsz, 3), 114, np.uint8)
+        canvas[top:top + nh, left:left + nw] = cv2.resize(frame, (nw, nh), interpolation=cv2.INTER_LINEAR)
+        blob = np.ascontiguousarray(canvas[:, :, ::-1].transpose(2, 0, 1), dtype=np.float32) / 255
+        with self._net.create_extractor() as ex:
+            ex.input("in0", self._ncnn.Mat(blob))
+            _, out = ex.extract("out0")
+        # out0: (84, 8400) = cx, cy, w, h in input pixels, then 80 class scores (0 = person).
+        out = np.array(out)
+        scores = out[4]
+        keep = scores >= self.conf
+        cx, cy, bw, bh = out[:4, keep]
+        boxes = np.stack([(cx - bw / 2 - left) / r, (cy - bh / 2 - top) / r, bw / r, bh / r], axis=1)
+        idx = cv2.dnn.NMSBoxes(boxes.tolist(), scores[keep].tolist(), self.conf, self.iou)
+        return [[*boxes[i].tolist(), float(scores[keep][i])] for i in np.array(idx).flatten()]
 
 
 class MockDetector:
@@ -129,8 +155,9 @@ class ByteTrack:
         self.low = low
         self.match_iou = match_iou
         self.max_lost = max_lost    # frames a lost track is kept for re-matching
-        self._tracks = {}           # id -> {"bbox": [x, y, w, h], "lost": int}
+        self._tracks = {}           # id -> {"bbox": [x, y, w, h], "lost": int, "t": float}
         self._next_id = 0
+        self.speed = {}             # id -> px/s of the lower-body point at the last match
 
     def update(self, dets):
         dets = [(list(d[:4]), d[4] if len(d) > 4 else 1.0) for d in dets]
@@ -139,14 +166,20 @@ class ByteTrack:
         pending = list(self._tracks)
         first, pending, new = self._match(pending, high)
         second, pending, _ = self._match(pending, low)   # unmatched low boxes are noise
+        now = time.time()
         for tid, box in first + second:
-            self._tracks[tid] = {"bbox": box, "lost": 0}
+            old = self._tracks[tid]
+            (ox, oy), (nx, ny) = bbox_bottom_center(old["bbox"]), bbox_bottom_center(box)
+            self.speed[tid] = math.hypot(nx - ox, ny - oy) / max(now - old["t"], 1e-3)
+            self._tracks[tid] = {"bbox": box, "lost": 0, "t": now}
         for tid in pending:
             self._tracks[tid]["lost"] += 1
             if self._tracks[tid]["lost"] > self.max_lost:
                 del self._tracks[tid]
+                self.speed.pop(tid, None)
         for box in new:
-            self._tracks[self._next_id] = {"bbox": box, "lost": 0}
+            self._tracks[self._next_id] = {"bbox": box, "lost": 0, "t": now}
+            self.speed[self._next_id] = 0.0
             self._next_id += 1
         return [(tid, t["bbox"]) for tid, t in self._tracks.items() if t["lost"] == 0]
 
@@ -172,6 +205,12 @@ class ByteTrack:
         inter = max(0, x2-x1) * max(0, y2-y1)
         ua = a[2] * a[3]; ub = b[2] * b[3]
         return inter / max(ua + ub - inter, 1e-9)
+
+
+def is_staff(box, speed, max_aspect=2.0, max_speed=50.0):
+    """Staff and passers-by are standing (tall box, height/width above max_aspect)
+    or moving fast (lower-body point above max_speed px/s); they never take a seat."""
+    return box[3] / max(box[2], 1e-9) > max_aspect or speed > max_speed
 
 
 # ---------------------------------------------------------------------------
@@ -287,13 +326,21 @@ class OccupancyTracker:
 # ---------------------------------------------------------------------------
 
 class CloudSync:
-    """JSON sender to Cloudflare Workers. Offline → local queue."""
+    """JSON sender to Cloudflare Workers. Payloads wait in a SQLite outbox until the
+    Worker accepts them, so status changes survive network outages and reboots."""
 
-    def __init__(self, api_url=None, token=None, device_id="pi1"):
+    # shortcut: oldest payloads are dropped past this; at change-only rates that is days offline.
+    MAX_QUEUE = 10_000
+
+    def __init__(self, api_url=None, token=None, device_id="pi1", queue_path="queue.db"):
         self.api_url = api_url or os.environ.get("API_URL", "")
-        self.token = token or os.environ.get("API_TOKEN", "demo")
+        # The env var wins: a config.json fallback only carries a placeholder token.
+        self.token = os.environ.get("API_TOKEN") or token or ""
         self.device_id = device_id
-        self._queue = deque()
+        self._db = sqlite3.connect(queue_path)
+        self._db.execute("CREATE TABLE IF NOT EXISTS outbox (id INTEGER PRIMARY KEY, payload TEXT NOT NULL)")
+        self._db.commit()
+        self._online = True
         self._last_heartbeat = time.time()
         self._last = {}   # seat_id -> latest result, re-sent by heartbeat
 
@@ -304,42 +351,58 @@ class CloudSync:
             "occupancy": occupancy,
         }
 
+    def queued(self):
+        return self._db.execute("SELECT count(*) FROM outbox").fetchone()[0]
+
     def submit(self, results):
         """Send only seats whose status changed (keeps Workers/D1 in free tier)."""
         changed = {sid: r for sid, r in results.items()
                    if self._last.get(sid, {}).get("status") != r.get("status")}
         self._last.update(results)
-        if changed:
-            payload = self._payload(changed)
-            if not self._send(payload):
-                self._queue.append(payload)
+        if not changed or not self.api_url:
+            return
+        self._db.execute("INSERT INTO outbox (payload) VALUES (?)", (json.dumps(self._payload(changed)),))
+        self._db.execute("DELETE FROM outbox WHERE id <= (SELECT max(id) FROM outbox) - ?", (self.MAX_QUEUE,))
+        self._db.commit()
+        # While offline, only the heartbeat retries, so the loop does not wait on timeouts.
+        if self._online:
+            self._flush()
+
+    def _flush(self):
+        """Send queued payloads oldest first; stop at the first failure."""
+        for row_id, payload in self._db.execute("SELECT id, payload FROM outbox ORDER BY id").fetchall():
+            self._online = self._send(json.loads(payload))
+            if not self._online:
+                return False
+            self._db.execute("DELETE FROM outbox WHERE id = ?", (row_id,))
+            self._db.commit()
+        return True
 
     def heartbeat(self):
         now = time.time()
-        if now - self._last_heartbeat < 30:
+        if now - self._last_heartbeat < 30 or not self.api_url:
             return
         self._last_heartbeat = now
-        print(f"  [heartbeat] {self.device_id}")
-        while self._queue:
-            self._send(self._queue.popleft())
+        print(f"  [heartbeat] {self.device_id} (未送信 {self.queued()} 件)")
         # Full snapshot: keeps the device "online" (90 s rule) and repairs lost updates.
-        if self._last:
-            self._send(self._payload(dict(self._last)))
+        if self._flush() and self._last:
+            self._online = self._send(self._payload(dict(self._last)))
 
     def _send(self, payload):
-        if not self.api_url:
-            return True
+        req = urllib.request.Request(
+            self.api_url, data=json.dumps(payload).encode(), method="POST",
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {self.token}"})
         try:
-            import requests
-            resp = requests.post(
-                self.api_url, json=payload,
-                headers={"Authorization": f"Bearer {self.token}"}, timeout=5)
-            return resp.ok
-        except ImportError:
-            pass  # No requests lib → mock success
-        except Exception as e:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                return 200 <= resp.status < 300
+        except urllib.error.HTTPError as e:
+            # A rejected payload never succeeds: drop it rather than block the queue.
+            # 401/429/5xx keep it (a token fix or a retry can still deliver it).
+            print(f"    [cloud err] HTTP {e.code}")
+            return e.code in (400, 413)
+        except OSError as e:
             print(f"    [cloud err] {e}")
-        return False
+            return False
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +484,7 @@ setTimeout(u,2000)};}u();</script>
 # ---------------------------------------------------------------------------
 
 def run(cams, zones, detector, tracker, cloud, duration_s=None, interval_s=1.0,
-        high_score=0.5):
+        high_score=0.5, staff_aspect=2.0, staff_speed=50.0):
     """Every interval: each camera's frame → persons → its own tracker → its zones' seats.
     cams: [(camera_id, Camera)]. duration_s=None runs until interrupted."""
     trackers = {cid: ByteTrack(high=high_score) for cid, _ in cams}   # tracks live across frames
@@ -431,7 +494,9 @@ def run(cams, zones, detector, tracker, cloud, duration_s=None, interval_s=1.0,
     while duration_s is None or time.time() - start < duration_s:
         t0 = time.time()
         for cid, cam in cams:
-            tracks = trackers[cid].update(detector(cam.read_frame()))
+            bt = trackers[cid]
+            tracks = [(tid, box) for tid, box in bt.update(detector(cam.read_frame()))
+                      if not is_staff(box, bt.speed[tid], staff_aspect, staff_speed)]
             for z in zones_of[cid]:
                 cloud.submit(tracker.process_frame(tracks, z))
         cloud.heartbeat()
@@ -495,7 +560,9 @@ def main(argv=None):
     try:
         run(cams, zones, detector, tracker, cloud,
             duration_s=args.duration if args.mock else None,
-            high_score=thresh.get("confidence", 0.5))
+            high_score=thresh.get("confidence", 0.5),
+            staff_aspect=thresh.get("staff_aspect_ratio", 2.0),
+            staff_speed=thresh.get("staff_speed_px", 50.0))
     except KeyboardInterrupt:
         pass
     finally:

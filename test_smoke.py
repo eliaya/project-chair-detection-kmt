@@ -165,6 +165,20 @@ class TestByteTrack(unittest.TestCase):
         tracks = bt.update([[2, 0, 50, 100, 0.9], [302, 0, 50, 100, 0.9]])
         self.assertEqual(sorted(tid for tid, _ in tracks), [0, 1])
 
+    def test_speed_of_moving_person(self):
+        from main import ByteTrack
+        bt = ByteTrack()
+        tid = bt.update([[100, 100, 50, 100, 0.9]])[0][0]
+        bt._tracks[tid]["t"] -= 1.0   # pretend one second passed
+        bt.update([[106, 108, 50, 100, 0.9]])
+        self.assertAlmostEqual(bt.speed[tid], 10.0, delta=0.1)   # 6-8-10 triangle
+
+    def test_is_staff(self):
+        from main import is_staff
+        self.assertFalse(is_staff([0, 0, 100, 140], speed=5))     # seated
+        self.assertTrue(is_staff([0, 0, 60, 180], speed=5))       # standing
+        self.assertTrue(is_staff([0, 0, 100, 140], speed=200))    # walking past
+
     def test_iou_self(self):
         from main import ByteTrack
         self.assertAlmostEqual(ByteTrack._iou([0, 0, 100, 100], [0, 0, 100, 100]), 1.0)
@@ -175,25 +189,54 @@ class TestByteTrack(unittest.TestCase):
 
 
 class TestCloudSync(unittest.TestCase):
-    """Cloud sync without real server."""
+    """SQLite outbox: nothing is lost while the Worker is unreachable."""
 
-    def test_submit_without_url(self):
-        from main import CloudSync
-        cloud = CloudSync(device_id="test1")
-        # No api_url → mock success (nothing queued)
-        cloud.submit({"s1": {"status": "occupied"}})
-        self.assertFalse(cloud._queue)  # Empty queue on mock success
+    URL = "http://127.0.0.1:1/api/occupancy"   # nothing listens on port 1
 
-    def test_submit_with_fake_url(self):
+    def cloud(self, path=":memory:", **kw):
         from main import CloudSync
-        cloud = CloudSync(api_url="http://localhost:9999/fake", device_id="test2")
+        return CloudSync(api_url=kw.pop("api_url", self.URL), device_id="t", queue_path=path, **kw)
+
+    def test_submit_without_url_sends_nothing(self):
+        from main import CloudSync
+        cloud = CloudSync(api_url="", device_id="t", queue_path=":memory:")
         cloud.submit({"s1": {"status": "occupied"}})
-        # Should be in queue (no real server to receive)
-        self.assertEqual(len(cloud._queue), 1)
+        self.assertEqual(cloud.queued(), 0)
+
+    def test_unreachable_server_queues(self):
+        cloud = self.cloud()
+        cloud.submit({"s1": {"status": "occupied"}})
+        self.assertEqual(cloud.queued(), 1)
+
+    def test_queue_survives_restart(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "q.db")
+            self.cloud(path).submit({"s1": {"status": "occupied"}})
+            again = self.cloud(path)
+            sent = []
+            again._send = lambda p: sent.append(p) or True
+            again._last_heartbeat = 0
+            again.heartbeat()
+            self.assertEqual(sent[0]["occupancy"], {"s1": {"status": "occupied"}})
+            self.assertEqual(again.queued(), 0)
+
+    def test_offline_submit_waits_for_heartbeat_and_keeps_order(self):
+        cloud = self.cloud()
+        sent, up = [], [False]
+        cloud._send = lambda p: up[0] and (sent.append(p["occupancy"]) or True)
+        cloud.submit({"s1": {"status": "confirming"}})   # fails, goes offline
+        cloud.submit({"s1": {"status": "occupied"}})     # offline: queued, not tried
+        self.assertEqual((sent, cloud.queued()), ([], 2))
+        up[0] = True
+        cloud._last_heartbeat = 0
+        cloud.heartbeat()
+        self.assertEqual(sent[:2], [{"s1": {"status": "confirming"}},
+                                    {"s1": {"status": "occupied"}}])
+        self.assertEqual(cloud.queued(), 0)
 
     def test_submit_sends_only_status_changes(self):
-        from main import CloudSync
-        cloud = CloudSync(device_id="test4")
+        cloud = self.cloud()
         sent = []
         cloud._send = lambda p: sent.append(p) or True
         cloud.submit({"s1": {"status": "occupied", "count": 1}})
@@ -209,11 +252,35 @@ class TestCloudSync(unittest.TestCase):
         cloud.heartbeat()  # full snapshot
         self.assertEqual(set(sent[-1]["occupancy"]), {"s1", "s2"})
 
-    def test_heartbeat_noop(self):
-        from main import CloudSync
-        cloud = CloudSync(device_id="test3")
-        cloud.heartbeat()  # First call sets heartbeat
-        cloud.heartbeat()  # Within 30s → no-op (should print or do nothing)
+    def test_http_errors(self):
+        """400 is dropped (never succeeds); 401 stays queued (fix the token, then it goes)."""
+        import http.server, threading
+        codes = [400, 401]
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.rfile.read(int(self.headers["Content-Length"]))
+                self.send_response(codes.pop(0))
+                self.end_headers()
+
+            def log_message(self, *a):
+                pass
+
+        srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            cloud = self.cloud(api_url=f"http://127.0.0.1:{srv.server_port}/api/occupancy")
+            cloud.submit({"s1": {"status": "occupied"}})
+            self.assertEqual(cloud.queued(), 0)
+            cloud.submit({"s1": {"status": "empty"}})
+            self.assertEqual(cloud.queued(), 1)
+        finally:
+            srv.shutdown()
+
+    def test_env_token_beats_config_placeholder(self):
+        from unittest import mock
+        with mock.patch.dict(os.environ, {"API_TOKEN": "real"}):
+            self.assertEqual(self.cloud(token="YOUR_TOKEN").token, "real")
 
 
 class TestCamera(unittest.TestCase):
@@ -272,18 +339,23 @@ class TestConfigURL(unittest.TestCase):
         srv = http.server.HTTPServer(("127.0.0.1", 0), H)
         threading.Thread(target=srv.handle_request, daemon=True).start()
         url = f"http://127.0.0.1:{srv.server_port}/api/config"
-        with mock.patch.dict(os.environ, {"API_TOKEN": "tok"}):
-            cfg = load_config(url)
-        srv.server_close()
-        self.assertEqual(cfg, {"zones": [], "thresholds": {}})
-        self.assertEqual(seen["auth"], "Bearer tok")
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            cache = os.path.join(d, "cache.json")
+            with mock.patch.dict(os.environ, {"API_TOKEN": "tok"}):
+                cfg = load_config(url, cache_path=cache)
+            srv.server_close()
+            self.assertEqual(cfg, {"zones": [], "thresholds": {}})
+            self.assertEqual(seen["auth"], "Bearer tok")
+            # Offline later: the cached copy is used, not the sample config.json.
+            self.assertEqual(load_config("http://127.0.0.1:1/api/config", cache_path=cache), cfg)
 
-    def test_unreachable_url_falls_back_to_local_file(self):
+    def test_unreachable_url_without_cache_falls_back_to_local_file(self):
         from utils import load_config
         cwd = os.getcwd()
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
         try:
-            cfg = load_config("http://127.0.0.1:1/api/config")
+            cfg = load_config("http://127.0.0.1:1/api/config", cache_path="/nonexistent/c.json")
         finally:
             os.chdir(cwd)
         self.assertIn("zones", cfg)
@@ -297,7 +369,7 @@ class TestRun(unittest.TestCase):
         other = {"id": "z9", "camera": "cam2", "seats": [[{"name": "C1", "vertices": SQ(0)}]]}
         tracker = OccupancyTracker([ZONE, other], conf_frames=3)
         tracker.ensure_seats()
-        cloud = CloudSync(device_id="t")
+        cloud = CloudSync(api_url="", device_id="t", queue_path=":memory:")
         detector = lambda frame: [seat_box(SQ(0))]   # someone always on A1
         run([("cam1", Camera(width=4, height=4))], [ZONE, other], detector,
             tracker, cloud, duration_s=0.3, interval_s=0.05)
@@ -305,6 +377,16 @@ class TestRun(unittest.TestCase):
         self.assertEqual(tracker.states["z1_t00_s01"].status, "empty")
         # cam2 is not running, so its zone is untouched even though the box overlaps C1.
         self.assertEqual(tracker.states["z9_t00_s00"].status, "empty")
+
+    def test_standing_person_does_not_take_a_seat(self):
+        from main import run, OccupancyTracker, CloudSync, Camera
+        tracker = OccupancyTracker([ZONE], conf_frames=1)
+        cx, cy = 50, 50   # centre of A1
+        standing = [cx - 20, cy - 200 * 0.67, 40, 200]   # height/width 5
+        run([("cam1", Camera(width=4, height=4))], [ZONE], lambda f: [standing], tracker,
+            CloudSync(api_url="", device_id="t", queue_path=":memory:"),
+            duration_s=0.2, interval_s=0.05)
+        self.assertEqual(tracker.states["z1_t00_s00"].status, "empty")
 
     def test_mock_detector_sits_on_configured_seats(self):
         from main import MockDetector, OccupancyTracker

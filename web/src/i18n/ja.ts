@@ -247,8 +247,11 @@ export const ja: Dict = {
   'thresholds.confirmFramesHint': '約1回/秒。3なら約3秒で着席。',
   'thresholds.leaveGrace': '離席猶予 (秒)',
   'thresholds.staffAspect': '店員判定: 縦横比',
-  'thresholds.staffSpeed': '店員判定: 移動速度 (px)',
-  'thresholds.unused': '現在の main.py では未使用。',
+  'thresholds.staffSpeed': '店員判定: 移動速度 (px/秒)',
+  'thresholds.staffAspectHint':
+    '人物枠の高さ÷幅がこれを超える人（立っている人）は着席とみなしません。',
+  'thresholds.staffSpeedHint':
+    '足元の移動速度（ピクセル/秒）がこれを超える人は着席とみなしません。',
 
   'site.desc':
     '監視する店舗・施設の名前です。管理画面のサイドバーに表示されます。',

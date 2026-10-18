@@ -15,13 +15,13 @@ export const thresholdFields: Field[] = [
     name: 'staff_aspect_ratio',
     label: 'thresholds.staffAspect',
     type: 'number',
-    description: 'thresholds.unused',
+    description: 'thresholds.staffAspectHint',
   },
   {
     name: 'staff_speed_px',
     label: 'thresholds.staffSpeed',
     type: 'number',
-    description: 'thresholds.unused',
+    description: 'thresholds.staffSpeedHint',
   },
 ]
 

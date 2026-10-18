@@ -90,7 +90,7 @@
     "confidence": 0.5,
     "confirm_frames": 3,
     "leave_grace_s": 10.0,
-    "staff_aspect_ratio": 1.5,
+    "staff_aspect_ratio": 2.0,
     "staff_speed_px": 50
   }
 }

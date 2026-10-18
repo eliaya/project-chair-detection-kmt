@@ -238,8 +238,11 @@ export const zhCN: Dict = {
   'thresholds.confirmFramesHint': '约每秒 1 次；3 表示约 3 秒后判定入座。',
   'thresholds.leaveGrace': '离席缓冲时间 (秒)',
   'thresholds.staffAspect': '店员判定：长宽比',
-  'thresholds.staffSpeed': '店员判定：移动速度 (px)',
-  'thresholds.unused': '当前的 main.py 未使用。',
+  'thresholds.staffSpeed': '店员判定：移动速度 (px/秒)',
+  'thresholds.staffAspectHint':
+    '人物框的高度÷宽度超过此值的人（站立者）不视为入座。',
+  'thresholds.staffSpeedHint':
+    '下半身移动速度（像素/秒）超过此值的人不视为入座。',
 
   'site.desc': '监控的店铺或场所名称，会显示在管理后台的侧边栏。',
   'site.name': '站点名称',

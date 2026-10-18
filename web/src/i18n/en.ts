@@ -253,8 +253,11 @@ export const en = {
     'About once per second; 3 means seated after about 3 seconds.',
   'thresholds.leaveGrace': 'Leave grace period (s)',
   'thresholds.staffAspect': 'Staff detection: aspect ratio',
-  'thresholds.staffSpeed': 'Staff detection: speed (px)',
-  'thresholds.unused': 'Not used by the current main.py.',
+  'thresholds.staffSpeed': 'Staff detection: speed (px/s)',
+  'thresholds.staffAspectHint':
+    'People whose box is taller than this many times its width (standing) are not counted as seated.',
+  'thresholds.staffSpeedHint':
+    'People whose lower body moves faster than this (pixels per second) are not counted as seated.',
 
   'site.desc':
     'The name of the store or facility being monitored. It is shown in the sidebar of the admin console.',
