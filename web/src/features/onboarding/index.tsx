@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { getRouteApi, useNavigate } from '@tanstack/react-router'
+import { type Key, useI18n } from '@/i18n'
 import { ChevronLeft, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, meQuery, setupQuery, siteNameQuery, type Me } from '@/lib/api'
@@ -16,59 +17,60 @@ const FORM_ID = 'onboarding-form'
 const steps = ['site', 'admin', 'done'] as const
 type StepKey = (typeof steps)[number]
 
-const copy: Record<StepKey, { title: string; description: string }> = {
-  site: {
-    title: 'サイト名を設定',
-    description:
-      '監視する店舗・施設の名前です。管理画面のサイドバーに表示されます。',
-  },
+const copy: Record<StepKey, { title: Key; description: Key }> = {
+  site: { title: 'onboarding.siteTitle', description: 'site.desc' },
   admin: {
-    title: '管理者を作成',
-    description:
-      'この管理画面に最初にログインするアカウントです。デプロイ時に設定した Setup code が必要です。',
+    title: 'onboarding.adminTitle',
+    description: 'onboarding.adminDesc',
   },
-  done: {
-    title: '準備完了！',
-    description:
-      '「デバイス」「カメラ」「ゾーン」を登録し、Pi で main.py を起動すると、ダッシュボードに卓の稼働状況が表示されます。',
-  },
+  done: { title: 'onboarding.doneTitle', description: 'onboarding.doneDesc' },
 }
 
 const siteFields: Field[] = [
-  { name: 'site_name', label: 'サイト名', placeholder: '例: 本店', wide: true },
+  {
+    name: 'site_name',
+    label: 'site.name',
+    placeholder: 'site.namePlaceholder',
+    wide: true,
+  },
 ]
 const siteSchema = setupSchema.pick({ site_name: true })
 
 const adminFields: Field[] = [
   {
     name: 'setup_code',
-    label: 'Setup code',
+    label: 'onboarding.setupCode',
     type: 'password',
-    description: 'wrangler secret put SETUP_TOKEN で設定した値です。',
+    description: 'onboarding.setupCodeHint',
     wide: true,
   },
-  { name: 'email', label: 'メールアドレス', placeholder: 'admin@example.com' },
-  { name: 'name', label: '名前' },
+  { name: 'email', label: 'field.email', placeholder: 'admin@example.com' },
+  { name: 'name', label: 'field.name' },
   {
     name: 'password',
-    label: 'パスワード',
+    label: 'field.password',
     type: 'password',
-    description: '半角英数字・記号 8文字以上',
+    description: 'onboarding.passwordHint',
   },
-  { name: 'password_confirm', label: 'パスワード（確認）', type: 'password' },
+  {
+    name: 'password_confirm',
+    label: 'onboarding.passwordConfirm',
+    type: 'password',
+  },
 ]
 const adminFormSchema = setupSchema
   .omit({ site_name: true })
   .extend({ password_confirm: z.string() })
   .refine((d) => d.password === d.password_confirm, {
     path: ['password_confirm'],
-    message: 'パスワードが一致しません',
+    message: 'validation.passwordMismatch',
   })
 
 export function Onboarding() {
   const { setup } = route.useRouteContext()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   // Wizard design tokens live on <html> so dialogs/toasts match (theme.css).
   useEffect(() => {
@@ -108,18 +110,19 @@ export function Onboarding() {
         needsAdmin: false,
       })
       setMe(created)
-      toast.success('管理者を作成しました')
+      toast.success(t('onboarding.adminCreated'))
       go(steps.indexOf('done'))
     },
   })
   const pending = createAdmin.isPending
   const showForm = step !== 'done' && setup.enabled
-  const actionLabel =
+  const actionLabel = t(
     step === 'site'
-      ? '次へ'
+      ? 'common.next'
       : step === 'admin'
-        ? 'アカウントを作成'
-        : 'ダッシュボードへ'
+        ? 'onboarding.createAccount'
+        : 'onboarding.toDashboard'
+  )
 
   return (
     <div className='flex min-h-svh items-center bg-background py-8 sm:py-16'>
@@ -136,7 +139,7 @@ export function Onboarding() {
                   disabled={pending}
                 >
                   <ChevronLeft className='size-4' />
-                  戻る
+                  {t('common.back')}
                 </Button>
               )}
             </div>
@@ -147,10 +150,10 @@ export function Onboarding() {
                   tabIndex={-1}
                   className='text-4xl leading-tight font-bold tracking-tight text-balance outline-none'
                 >
-                  {copy[step].title}
+                  {t(copy[step].title)}
                 </h1>
                 <p className='max-w-xs text-sm leading-relaxed text-muted-foreground'>
-                  {copy[step].description}
+                  {t(copy[step].description)}
                 </p>
               </div>
               <div className='flex flex-col gap-5 max-md:order-4 max-md:p-6'>
@@ -167,17 +170,23 @@ export function Onboarding() {
                   {actionLabel}
                 </Button>
                 <nav
-                  aria-label='セットアップの進捗'
+                  aria-label={t('onboarding.progress')}
                   className='flex justify-center gap-1.5'
                 >
                   <span className='sr-only'>
-                    ステップ {index + 1} / {steps.length}
+                    {t('onboarding.stepOf', {
+                      n: index + 1,
+                      total: steps.length,
+                    })}
                   </span>
                   {steps.map((s, i) => (
                     <button
                       key={s}
                       type='button'
-                      aria-label={`ステップ ${i + 1}: ${copy[s].title}`}
+                      aria-label={t('onboarding.stepLabel', {
+                        n: i + 1,
+                        title: t(copy[s].title),
+                      })}
                       aria-current={i === index ? 'step' : undefined}
                       disabled={
                         pending || i < minIndex || i > Math.max(furthest, index)
@@ -204,9 +213,8 @@ export function Onboarding() {
                 <ItemList
                   items={[
                     {
-                      title: 'SETUP_TOKEN が未設定です',
-                      description:
-                        'npx wrangler secret put SETUP_TOKEN で設定してください（ローカルは web/.dev.vars）。',
+                      title: t('onboarding.setupDisabledTitle'),
+                      description: t('onboarding.setupDisabledDesc'),
                     },
                   ]}
                 />
@@ -243,8 +251,8 @@ export function Onboarding() {
               {step === 'done' && (
                 <ItemList
                   items={[
-                    { title: 'サイト名', description: siteName },
-                    { title: '管理者', description: me?.email ?? '' },
+                    { title: t('site.name'), description: siteName },
+                    { title: t('field.admin'), description: me?.email ?? '' },
                   ]}
                 />
               )}

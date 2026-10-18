@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useI18n } from '@/i18n'
 import { toast } from 'sonner'
 import { api, siteNameQuery } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -9,23 +10,24 @@ import { siteNameSchema } from '../../../shared/schemas'
 
 export function Site() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const { data, isSuccess } = useQuery(siteNameQuery)
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
       api.put('/settings/site_name', values),
     onSuccess: (_, values) => {
       queryClient.setQueryData(siteNameQuery.queryKey, String(values.site_name))
-      toast.success('保存しました')
+      toast.success(t('common.saved'))
     },
   })
 
   return (
     <PageShell
-      title='サイト'
-      description='監視する店舗・施設の名前です。管理画面のサイドバーに表示されます。'
+      title={t('nav.site')}
+      description={t('site.desc')}
       actions={
         <Button type='submit' form='site-form' disabled={save.isPending}>
-          保存
+          {t('common.save')}
         </Button>
       }
     >
@@ -37,8 +39,8 @@ export function Site() {
               fields={[
                 {
                   name: 'site_name',
-                  label: 'サイト名',
-                  placeholder: '例: 本店',
+                  label: 'site.name',
+                  placeholder: 'site.namePlaceholder',
                 },
               ]}
               schema={siteNameSchema}

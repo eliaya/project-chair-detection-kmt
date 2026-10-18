@@ -1,6 +1,7 @@
 import { type z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
+import { type Key, useI18n } from '@/i18n'
 import { listQuery } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import {
@@ -19,12 +20,13 @@ import { SelectDropdown } from '@/components/select-dropdown'
 
 export type Field = {
   name: string
-  label: string
+  label: Key
   type?: 'text' | 'number' | 'password' | 'json' | 'select'
   // select: ids of this resource become the options
   optionsFrom?: string
+  // An i18n key, or a literal example such as 'pi1'
   placeholder?: string
-  description?: string
+  description?: Key
   // Locked when editing (primary keys)
   immutable?: boolean
   // Spans both columns when the form is laid out as a grid
@@ -56,6 +58,7 @@ export function FieldsForm({
   className = 'space-y-4',
   onValid,
 }: FieldsFormProps) {
+  const { t, tr } = useI18n()
   const form = useForm<Record<string, string>>({
     defaultValues: Object.fromEntries(
       fields.map((f) => [f.name, toText(f, initial[f.name])])
@@ -71,7 +74,7 @@ export function FieldsForm({
         try {
           values[f.name] = JSON.parse(v)
         } catch {
-          form.setError(f.name, { message: 'JSON 形式が正しくありません' })
+          form.setError(f.name, { message: 'validation.json' })
           return
         }
       } else values[f.name] = v
@@ -107,7 +110,7 @@ export function FieldsForm({
               <FormItem
                 className={cn('content-start', f.wide && 'sm:col-span-2')}
               >
-                <FormLabel>{f.label}</FormLabel>
+                <FormLabel>{t(f.label)}</FormLabel>
                 {f.type === 'select' ? (
                   <OptionsSelect
                     resource={f.optionsFrom ?? ''}
@@ -121,13 +124,13 @@ export function FieldsForm({
                       <Textarea
                         rows={4}
                         className='font-mono text-xs'
-                        placeholder={f.placeholder}
+                        placeholder={f.placeholder && tr(f.placeholder)}
                         {...field}
                       />
                     ) : f.type === 'password' ? (
                       <PasswordInput
                         autoComplete='new-password'
-                        placeholder={f.placeholder}
+                        placeholder={f.placeholder && tr(f.placeholder)}
                         {...field}
                       />
                     ) : (
@@ -135,7 +138,7 @@ export function FieldsForm({
                         type={f.type === 'number' ? 'number' : 'text'}
                         step='any'
                         autoComplete='off'
-                        placeholder={f.placeholder}
+                        placeholder={f.placeholder && tr(f.placeholder)}
                         {...field}
                         disabled={isEdit && f.immutable}
                       />
@@ -143,7 +146,7 @@ export function FieldsForm({
                   </FormControl>
                 )}
                 {f.description && (
-                  <FormDescription>{f.description}</FormDescription>
+                  <FormDescription>{t(f.description)}</FormDescription>
                 )}
                 <FormMessage />
               </FormItem>
@@ -176,7 +179,6 @@ function OptionsSelect({
       onValueChange={onChange}
       isPending={isPending}
       disabled={disabled}
-      placeholder='選択してください'
       items={data?.map((r) => ({
         value: r.id,
         label: r.name ? `${r.id}（${r.name}）` : r.id,

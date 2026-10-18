@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { useI18n } from '@/i18n'
 import { Loader2, LogIn } from 'lucide-react'
 import { api, meQuery, type Me } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -20,10 +21,9 @@ import { PasswordInput } from '@/components/password-input'
 
 const formSchema = z.object({
   email: z.email({
-    error: (iss) =>
-      iss.input === '' ? 'メールアドレスを入力してください' : undefined,
+    error: (iss) => (iss.input === '' ? 'auth.emailRequired' : undefined),
   }),
-  password: z.string().min(1, 'パスワードを入力してください'),
+  password: z.string().min(1, 'auth.passwordRequired'),
 })
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
@@ -37,6 +37,7 @@ export function UserAuthForm({
 }: UserAuthFormProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -67,7 +68,7 @@ export function UserAuthForm({
           name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>メールアドレス</FormLabel>
+              <FormLabel>{t('field.email')}</FormLabel>
               <FormControl>
                 <Input
                   placeholder='name@example.com'
@@ -84,7 +85,7 @@ export function UserAuthForm({
           name='password'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>パスワード</FormLabel>
+              <FormLabel>{t('field.password')}</FormLabel>
               <FormControl>
                 <PasswordInput
                   placeholder='********'
@@ -98,7 +99,7 @@ export function UserAuthForm({
         />
         <Button className='mt-2' disabled={login.isPending}>
           {login.isPending ? <Loader2 className='animate-spin' /> : <LogIn />}
-          ログイン
+          {t('auth.signIn')}
         </Button>
       </form>
     </Form>

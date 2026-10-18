@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { useI18n } from '@/i18n'
 import { meQuery } from '@/lib/api'
 import { getDisplayNameInitials } from '@/lib/utils'
 import useDialogState from '@/hooks/use-dialog-state'
@@ -19,6 +20,7 @@ import { SignOutDialog } from '@/components/sign-out-dialog'
 export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
   const { data: me } = useQuery(meQuery)
+  const { t } = useI18n()
 
   return (
     <>
@@ -44,15 +46,15 @@ export function ProfileDropdown() {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
-              <Link to='/admins'>管理者</Link>
+              <Link to='/admins'>{t('nav.admins')}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to='/settings/appearance'>外観設定</Link>
+              <Link to='/settings/appearance'>{t('profile.appearance')}</Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>
-            ログアウト
+            {t('auth.signOut')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

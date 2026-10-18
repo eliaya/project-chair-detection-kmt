@@ -12,6 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
+import { useI18n } from '@/i18n'
 import {
   Table,
   TableBody,
@@ -39,10 +40,11 @@ type DataTableProps<T> = {
 export function DataTable<T>({
   columns,
   data,
-  searchPlaceholder = '検索...',
+  searchPlaceholder,
   filters,
   bulkActions,
 }: DataTableProps<T>) {
+  const { t } = useI18n()
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState({})
 
@@ -66,7 +68,7 @@ export function DataTable<T>({
     <div className='flex flex-1 flex-col gap-4'>
       <DataTableToolbar
         table={table}
-        searchPlaceholder={searchPlaceholder}
+        searchPlaceholder={searchPlaceholder ?? t('table.search')}
         filters={filters}
       />
       <div className='overflow-hidden rounded-md border'>
@@ -110,7 +112,7 @@ export function DataTable<T>({
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  データがありません
+                  {t('common.noData')}
                 </TableCell>
               </TableRow>
             )}

@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useLocation } from '@tanstack/react-router'
+import { useI18n } from '@/i18n'
 import { api } from '@/lib/api'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 
@@ -12,6 +13,7 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   const handleSignOut = async () => {
     // Clear local state even if the request fails; the cookie expires anyway.
@@ -30,10 +32,10 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     <ConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
-      title='ログアウト'
-      desc='ログアウトしますか？'
-      cancelBtnText='キャンセル'
-      confirmText='ログアウト'
+      title={t('auth.signOut')}
+      desc={t('auth.signOutConfirm')}
+      cancelBtnText={t('common.cancel')}
+      confirmText={t('auth.signOut')}
       destructive
       handleConfirm={handleSignOut}
       className='sm:max-w-sm'

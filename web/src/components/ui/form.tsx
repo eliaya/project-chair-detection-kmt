@@ -10,6 +10,7 @@ import {
 } from 'react-hook-form'
 import * as LabelPrimitive from '@radix-ui/react-label'
 import { Slot } from '@radix-ui/react-slot'
+import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 
@@ -134,7 +135,9 @@ function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {
 
 function FormMessage({ className, ...props }: React.ComponentProps<'p'>) {
   const { error, formMessageId } = useFormField()
-  const body = error ? String(error?.message ?? '') : props.children
+  const { tr } = useI18n()
+  // Shared schemas use i18n keys as messages.
+  const body = error ? tr(String(error?.message ?? '')) : props.children
 
   if (!body) {
     return null

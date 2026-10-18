@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useI18n } from '@/i18n'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -10,22 +11,23 @@ import { thresholdFields, thresholdsQuery } from './fields'
 
 export function Thresholds() {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const { data } = useQuery(thresholdsQuery)
   const save = useMutation({
     mutationFn: (values: object) => api.put('/settings/thresholds', values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: thresholdsQuery.queryKey })
-      toast.success('保存しました')
+      toast.success(t('common.saved'))
     },
   })
 
   return (
     <PageShell
-      title='閾値'
-      description='main.py の判定パラメータ。各デバイスは起動時に読み込みます（変更は再起動後に反映）。'
+      title={t('nav.thresholds')}
+      description={t('thresholds.desc')}
       actions={
         <Button type='submit' form='thresholds-form' disabled={save.isPending}>
-          保存
+          {t('common.save')}
         </Button>
       }
     >

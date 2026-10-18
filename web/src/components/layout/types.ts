@@ -1,7 +1,8 @@
 import { type LinkProps } from '@tanstack/react-router'
+import { type Key } from '@/i18n'
 
 type BaseNavItem = {
-  title: string
+  title: Key
   badge?: string
   icon?: React.ElementType
 }
@@ -19,7 +20,7 @@ type NavCollapsible = BaseNavItem & {
 type NavItem = NavCollapsible | NavLink
 
 type NavGroup = {
-  title: string
+  title: Key
   items: NavItem[]
 }
 

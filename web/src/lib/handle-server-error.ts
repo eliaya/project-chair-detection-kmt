@@ -1,4 +1,5 @@
 import { AxiosError } from 'axios'
+import { t, tr } from '@/i18n'
 import { toast } from 'sonner'
 
 export function handleServerError(error: unknown) {
@@ -7,7 +8,7 @@ export function handleServerError(error: unknown) {
     console.log(error)
   }
 
-  let errMsg = 'Something went wrong!'
+  let errMsg = t('error.generic')
 
   if (
     error &&
@@ -15,13 +16,13 @@ export function handleServerError(error: unknown) {
     'status' in error &&
     Number(error.status) === 204
   ) {
-    errMsg = 'No content.'
+    errMsg = t('error.noContent')
   }
 
   if (error instanceof AxiosError) {
     const title = error.response?.data?.title
     if (typeof title === 'string' && title.length > 0) {
-      errMsg = title
+      errMsg = tr(title)
     }
   }
 

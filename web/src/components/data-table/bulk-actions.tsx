@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { type Table } from '@tanstack/react-table'
+import { useI18n } from '@/i18n'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -13,7 +14,6 @@ import {
 
 type DataTableBulkActionsProps<TData> = {
   table: Table<TData>
-  entityName: string
   children: React.ReactNode
 }
 
@@ -23,24 +23,23 @@ type DataTableBulkActionsProps<TData> = {
  * @template TData The type of data in the table.
  * @param {object} props The component props.
  * @param {Table<TData>} props.table The react-table instance.
- * @param {string} props.entityName The name of the entity being acted upon (e.g., "task", "user").
  * @param {React.ReactNode} props.children The action buttons to be rendered inside the toolbar.
  * @returns {React.ReactNode | null} The rendered component or null if no rows are selected.
  */
 export function DataTableBulkActions<TData>({
   table,
-  entityName,
   children,
 }: DataTableBulkActionsProps<TData>): React.ReactNode | null {
   const selectedRows = table.getFilteredSelectedRowModel().rows
   const selectedCount = selectedRows.length
   const toolbarRef = useRef<HTMLDivElement>(null)
   const [announcement, setAnnouncement] = useState('')
+  const { t } = useI18n()
 
   // Announce selection changes to screen readers
   useEffect(() => {
     if (selectedCount > 0) {
-      const message = `${selectedCount} ${entityName}${selectedCount > 1 ? 's' : ''} selected. Bulk actions toolbar is available.`
+      const message = t('bulk.announce', { count: selectedCount })
 
       // Use queueMicrotask to defer state update and avoid cascading renders
       queueMicrotask(() => {
@@ -51,7 +50,7 @@ export function DataTableBulkActions<TData>({
       const timer = setTimeout(() => setAnnouncement(''), 3000)
       return () => clearTimeout(timer)
     }
-  }, [selectedCount, entityName])
+  }, [selectedCount, t])
 
   const handleClearSelection = () => {
     table.resetRowSelection()
@@ -138,7 +137,7 @@ export function DataTableBulkActions<TData>({
       <div
         ref={toolbarRef}
         role='toolbar'
-        aria-label={`Bulk actions for ${selectedCount} selected ${entityName}${selectedCount > 1 ? 's' : ''}`}
+        aria-label={t('bulk.toolbar', { count: selectedCount })}
         aria-describedby='bulk-actions-description'
         tabIndex={-1}
         onKeyDown={handleKeyDown}
@@ -163,15 +162,15 @@ export function DataTableBulkActions<TData>({
                 size='icon'
                 onClick={handleClearSelection}
                 className='size-6 rounded-full'
-                aria-label='Clear selection'
-                title='Clear selection (Escape)'
+                aria-label={t('bulk.clearSelection')}
+                title={t('bulk.clearSelectionHint')}
               >
                 <X />
-                <span className='sr-only'>Clear selection</span>
+                <span className='sr-only'>{t('bulk.clearSelection')}</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Clear selection (Escape)</p>
+              <p>{t('bulk.clearSelectionHint')}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -188,15 +187,11 @@ export function DataTableBulkActions<TData>({
             <Badge
               variant='default'
               className='min-w-8 rounded-lg'
-              aria-label={`${selectedCount} selected`}
+              aria-label={t('table.nSelected', { count: selectedCount })}
             >
               {selectedCount}
             </Badge>{' '}
-            <span className='hidden sm:inline'>
-              {entityName}
-              {selectedCount > 1 ? 's' : ''}
-            </span>{' '}
-            selected
+            {t('bulk.selected')}
           </div>
 
           <Separator

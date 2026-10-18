@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { ChevronDownIcon } from '@radix-ui/react-icons'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { fonts } from '@/config/fonts'
+import { useI18n } from '@/i18n'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { cn } from '@/lib/utils'
 import { useFont } from '@/context/font-provider'
@@ -29,6 +30,7 @@ type AppearanceFormValues = z.infer<typeof appearanceFormSchema>
 export function AppearanceForm() {
   const { font, setFont } = useFont()
   const { theme, setTheme } = useTheme()
+  const { t } = useI18n()
 
   // This can come from your database or API.
   const defaultValues: Partial<AppearanceFormValues> = {
@@ -56,7 +58,7 @@ export function AppearanceForm() {
           name='font'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Font</FormLabel>
+              <FormLabel>{t('settings.font')}</FormLabel>
               <div className='relative w-max'>
                 <FormControl>
                   <select
@@ -77,7 +79,7 @@ export function AppearanceForm() {
                 <ChevronDownIcon className='absolute inset-e-3 top-2.5 h-4 w-4 opacity-50' />
               </div>
               <FormDescription className='font-manrope'>
-                Set the font you want to use in the dashboard.
+                {t('settings.fontDesc')}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -88,10 +90,8 @@ export function AppearanceForm() {
           name='theme'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Theme</FormLabel>
-              <FormDescription>
-                Select the theme for the dashboard.
-              </FormDescription>
+              <FormLabel>{t('theme.heading')}</FormLabel>
+              <FormDescription>{t('settings.themeDesc')}</FormDescription>
               <FormMessage />
               <RadioGroup
                 onValueChange={field.onChange}
@@ -99,7 +99,7 @@ export function AppearanceForm() {
                 className='grid max-w-md grid-cols-2 gap-8 pt-2'
               >
                 <FormItem>
-                  <FormLabel className='[&:has([data-state=checked])>div]:border-primary'>
+                  <FormLabel className='flex-col items-stretch [&:has([data-state=checked])>div]:border-primary'>
                     <FormControl>
                       <RadioGroupItem value='light' className='sr-only' />
                     </FormControl>
@@ -120,12 +120,12 @@ export function AppearanceForm() {
                       </div>
                     </div>
                     <span className='block w-full p-2 text-center font-normal'>
-                      Light
+                      {t('theme.light')}
                     </span>
                   </FormLabel>
                 </FormItem>
                 <FormItem>
-                  <FormLabel className='[&:has([data-state=checked])>div]:border-primary'>
+                  <FormLabel className='flex-col items-stretch [&:has([data-state=checked])>div]:border-primary'>
                     <FormControl>
                       <RadioGroupItem value='dark' className='sr-only' />
                     </FormControl>
@@ -146,7 +146,7 @@ export function AppearanceForm() {
                       </div>
                     </div>
                     <span className='block w-full p-2 text-center font-normal'>
-                      Dark
+                      {t('theme.dark')}
                     </span>
                   </FormLabel>
                 </FormItem>
@@ -155,7 +155,7 @@ export function AppearanceForm() {
           )}
         />
 
-        <Button type='submit'>Update preferences</Button>
+        <Button type='submit'>{t('settings.updatePreferences')}</Button>
       </form>
     </Form>
   )

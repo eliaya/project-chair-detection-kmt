@@ -3,25 +3,25 @@ import { api } from '@/lib/api'
 import { type Field } from '@/features/resources/fields-form'
 
 export const thresholdFields: Field[] = [
-  { name: 'confidence', label: '検出信頼度 (0〜1)', type: 'number' },
+  { name: 'confidence', label: 'thresholds.confidence', type: 'number' },
   {
     name: 'confirm_frames',
-    label: '着席確定の連続検出回数',
+    label: 'thresholds.confirmFrames',
     type: 'number',
-    description: '約1回/秒。3なら約3秒で着席。',
+    description: 'thresholds.confirmFramesHint',
   },
-  { name: 'leave_grace_s', label: '離席猶予 (秒)', type: 'number' },
+  { name: 'leave_grace_s', label: 'thresholds.leaveGrace', type: 'number' },
   {
     name: 'staff_aspect_ratio',
-    label: '店員判定: 縦横比',
+    label: 'thresholds.staffAspect',
     type: 'number',
-    description: '現在の main.py では未使用。',
+    description: 'thresholds.unused',
   },
   {
     name: 'staff_speed_px',
-    label: '店員判定: 移動速度 (px)',
+    label: 'thresholds.staffSpeed',
     type: 'number',
-    description: '現在の main.py では未使用。',
+    description: 'thresholds.unused',
   },
 ]
 

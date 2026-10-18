@@ -1,8 +1,9 @@
 import { type z } from 'zod'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { type I18n, useI18n } from '@/i18n'
 import { api, listQuery } from '@/lib/api'
-import { type TableStatus, seatStatusLabel } from '@/lib/seat-status'
+import { type TableStatus } from '@/lib/seat-status'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -41,12 +42,15 @@ const statusClass: Record<TableStatus, string> = {
   unknown: 'border-dashed text-muted-foreground',
 }
 
-const elapsed = (ms: number) => {
+const elapsed = (ms: number, t: I18n['t']) => {
   const m = Math.max(0, Math.floor(ms / 60_000))
-  return m < 60 ? `${m}分` : `${Math.floor(m / 60)}時間${m % 60}分`
+  return m < 60
+    ? t('time.minutes', { m })
+    : t('time.hoursMinutes', { h: Math.floor(m / 60), m: m % 60 })
 }
 
 export function Dashboard() {
+  const { t } = useI18n()
   const zones = useQuery(listQuery<Zone>('zones'))
   const current = useQuery({
     queryKey: ['occupancy', 'current'],
@@ -73,42 +77,37 @@ export function Dashboard() {
   }))
   const all = zoneTables.flatMap((z) => z.tables)
   const inUse = all.filter(
-    (t) => t.status === 'occupied' || t.status === 'leave_confirm'
+    (table) => table.status === 'occupied' || table.status === 'leave_confirm'
   ).length
-  const unknown = all.filter((t) => t.status === 'unknown').length
+  const unknown = all.filter((table) => table.status === 'unknown').length
   const known = all.length - unknown
 
   return (
-    <PageShell
-      title='ダッシュボード'
-      description='卓ごとの稼働状況（5秒ごとに更新）'
-    >
+    <PageShell title={t('nav.dashboard')} description={t('dashboard.desc')}>
       <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-        <Stat label='卓数' value={all.length} />
-        <Stat label='利用中' value={inUse} />
+        <Stat label={t('dashboard.tables')} value={all.length} />
+        <Stat label={t('dashboard.inUse')} value={inUse} />
         <Stat
-          label='稼働率'
+          label={t('dashboard.utilization')}
           value={known ? `${Math.round((inUse / known) * 100)}%` : '—'}
-          hint='不明の卓を除く'
+          hint={t('dashboard.utilizationHint')}
         />
         <Stat
-          label='不明'
+          label={t('status.unknown')}
           value={unknown}
-          hint='未受信、または90秒以上通信なし'
+          hint={t('dashboard.unknownHint')}
         />
       </div>
 
       {zones.data?.length === 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>初期設定を完了しましょう</CardTitle>
-            <CardDescription>
-              デバイス・カメラ・ゾーンを登録すると、卓の稼働状況がここに表示されます。
-            </CardDescription>
+            <CardTitle>{t('dashboard.emptyTitle')}</CardTitle>
+            <CardDescription>{t('dashboard.emptyDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link to='/devices'>デバイスを登録</Link>
+              <Link to='/devices'>{t('dashboard.registerDevice')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -121,19 +120,22 @@ export function Dashboard() {
             <CardDescription>{zone.description}</CardDescription>
           </CardHeader>
           <CardContent className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'>
-            {tables.map((t, i) => (
+            {tables.map((table, i) => (
               <div
                 key={i}
-                className={cn('rounded-lg border p-3', statusClass[t.status])}
+                className={cn(
+                  'rounded-lg border p-3',
+                  statusClass[table.status]
+                )}
               >
-                <div className='truncate text-sm'>{t.names.join('・')}</div>
+                <div className='truncate text-sm'>{table.names.join('・')}</div>
                 <div className='mt-1 flex items-baseline justify-between gap-2'>
                   <span className='font-semibold'>
-                    {seatStatusLabel[t.status]}
+                    {t(`status.${table.status}`)}
                   </span>
-                  {t.since && t.status !== 'unknown' && (
+                  {table.since && table.status !== 'unknown' && (
                     <span className='text-xs tabular-nums'>
-                      {elapsed(now - Date.parse(t.since))}
+                      {elapsed(now - Date.parse(table.since), t)}
                     </span>
                   )}
                 </div>

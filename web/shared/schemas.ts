@@ -1,21 +1,19 @@
 // Request schemas shared by the Worker (validation) and the admin UI (forms).
+// Custom messages are i18n keys (src/i18n); zod's own messages follow z.config.
 import { z } from 'zod'
-
-// Japanese validation messages in both the API responses and the forms.
-z.config(z.locales.ja())
 
 const id = z
   .string()
   .trim()
-  .regex(/^[A-Za-z0-9_-]{1,32}$/, '英数字・_・- のみ、32文字以内')
+  .regex(/^[A-Za-z0-9_-]{1,32}$/, 'validation.idFormat')
 const name = z.string().trim().max(64)
 const email = z.email().trim().toLowerCase()
 // Half-width only: an IME left on in a terminal silently produces full-width text.
 const password = z
   .string()
-  .min(8, '8文字以上')
+  .min(8, 'validation.passwordMin')
   .max(128)
-  .regex(/^[\x21-\x7E]+$/, '半角英数字・記号のみ（全角・空白は不可）')
+  .regex(/^[\x21-\x7E]+$/, 'validation.passwordCharset')
 
 export const seatStatuses = [
   'empty',
@@ -27,11 +25,11 @@ export type SeatStatus = (typeof seatStatuses)[number]
 
 export const adminCreateSchema = z.object({ email, name, password })
 export const siteNameSchema = z.object({
-  site_name: name.min(1, 'サイト名を入力してください'),
+  site_name: name.min(1, 'validation.siteNameRequired'),
 })
 // First admin from the web setup wizard; setup_code must match the SETUP_TOKEN secret.
 export const setupSchema = adminCreateSchema.extend({
-  setup_code: z.string().min(1, 'Setup code を入力してください').max(256),
+  setup_code: z.string().min(1, 'validation.setupCodeRequired').max(256),
   ...siteNameSchema.shape,
 })
 // Empty password on update keeps the current one.
@@ -45,7 +43,7 @@ export const cameraSchema = z.object({
   id,
   device_id: id,
   // main.py parses the camera index out of this path.
-  device_path: z.string().regex(/^\/dev\/video\d+$/, '/dev/videoN 形式'),
+  device_path: z.string().regex(/^\/dev\/video\d+$/, 'validation.devicePath'),
   fps: z.number().int().min(1).max(30),
   width: z.number().int().min(160).max(7680),
   height: z.number().int().min(120).max(4320),
@@ -57,7 +55,7 @@ export const zoneSchema = z.object({
   description: z.string().trim().max(200),
   vertices: z
     .array(z.tuple([z.number(), z.number()]))
-    .min(3, '3点以上')
+    .min(3, 'validation.verticesMin')
     .max(64),
   seats: z
     .array(z.array(z.string().trim().min(1).max(16)).min(1).max(16))

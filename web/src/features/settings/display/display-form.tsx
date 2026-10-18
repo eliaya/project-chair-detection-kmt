@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useI18n } from '@/i18n'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -14,36 +15,19 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 
+// Labels are the i18n keys `settings.item.<id>`.
 const items = [
-  {
-    id: 'recents',
-    label: 'Recents',
-  },
-  {
-    id: 'home',
-    label: 'Home',
-  },
-  {
-    id: 'applications',
-    label: 'Applications',
-  },
-  {
-    id: 'desktop',
-    label: 'Desktop',
-  },
-  {
-    id: 'downloads',
-    label: 'Downloads',
-  },
-  {
-    id: 'documents',
-    label: 'Documents',
-  },
+  'recents',
+  'home',
+  'applications',
+  'desktop',
+  'downloads',
+  'documents',
 ] as const
 
 const displayFormSchema = z.object({
   items: z.array(z.string()).refine((value) => value.some((item) => item), {
-    message: 'You have to select at least one item.',
+    message: 'settings.selectAtLeastOne',
   }),
 })
 
@@ -55,6 +39,7 @@ const defaultValues: Partial<DisplayFormValues> = {
 }
 
 export function DisplayForm() {
+  const { t } = useI18n()
   const form = useForm<DisplayFormValues>({
     resolver: zodResolver(displayFormSchema),
     defaultValues,
@@ -72,38 +57,40 @@ export function DisplayForm() {
           render={() => (
             <FormItem>
               <div className='mb-4'>
-                <FormLabel className='text-base'>Sidebar</FormLabel>
+                <FormLabel className='text-base'>
+                  {t('config.sidebar')}
+                </FormLabel>
                 <FormDescription>
-                  Select the items you want to display in the sidebar.
+                  {t('settings.sidebarItemsDesc')}
                 </FormDescription>
               </div>
               {items.map((item) => (
                 <FormField
-                  key={item.id}
+                  key={item}
                   control={form.control}
                   name='items'
                   render={({ field }) => {
                     return (
                       <FormItem
-                        key={item.id}
+                        key={item}
                         className='flex flex-row items-start'
                       >
                         <FormControl>
                           <Checkbox
-                            checked={field.value?.includes(item.id)}
+                            checked={field.value?.includes(item)}
                             onCheckedChange={(checked) => {
                               return checked
-                                ? field.onChange([...field.value, item.id])
+                                ? field.onChange([...field.value, item])
                                 : field.onChange(
                                     field.value?.filter(
-                                      (value) => value !== item.id
+                                      (value) => value !== item
                                     )
                                   )
                             }}
                           />
                         </FormControl>
                         <FormLabel className='font-normal'>
-                          {item.label}
+                          {t(`settings.item.${item}`)}
                         </FormLabel>
                       </FormItem>
                     )
@@ -114,7 +101,7 @@ export function DisplayForm() {
             </FormItem>
           )}
         />
-        <Button type='submit'>Update display</Button>
+        <Button type='submit'>{t('settings.updateDisplay')}</Button>
       </form>
     </Form>
   )

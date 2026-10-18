@@ -7,6 +7,7 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { LanguageProvider, t } from '@/i18n'
 import { toast } from 'sonner'
 import { meQuery } from '@/lib/api'
 import { handleServerError } from '@/lib/handle-server-error'
@@ -42,7 +43,7 @@ const queryClient = new QueryClient({
 
         if (error instanceof AxiosError) {
           if (error.response?.status === 304) {
-            toast.error('Content not modified!')
+            toast.error(t('error.notModified'))
           }
         }
       },
@@ -54,13 +55,13 @@ const queryClient = new QueryClient({
       if (query.queryKey[0] === meQuery.queryKey[0]) return
       if (error instanceof AxiosError) {
         if (error.response?.status === 401) {
-          toast.error('Session expired!')
+          toast.error(t('error.sessionExpired'))
           queryClient.removeQueries({ queryKey: meQuery.queryKey })
           const redirect = `${router.history.location.href}`
           router.navigate({ to: '/sign-in', search: { redirect } })
         }
         if (error.response?.status === 500) {
-          toast.error('Internal Server Error!')
+          toast.error(t('error.server'))
           // Only navigate to error page in production to avoid disrupting HMR in development
           if (import.meta.env.PROD) {
             router.navigate({ to: '/500' })
@@ -96,13 +97,15 @@ if (!rootElement.innerHTML) {
   root.render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <FontProvider>
-            <DirectionProvider>
-              <RouterProvider router={router} />
-            </DirectionProvider>
-          </FontProvider>
-        </ThemeProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <FontProvider>
+              <DirectionProvider>
+                <RouterProvider router={router} />
+              </DirectionProvider>
+            </FontProvider>
+          </ThemeProvider>
+        </LanguageProvider>
       </QueryClientProvider>
     </StrictMode>
   )

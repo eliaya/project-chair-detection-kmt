@@ -1,7 +1,9 @@
 import { Outlet } from '@tanstack/react-router'
+import { useI18n } from '@/i18n'
 import { Monitor, Palette } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { ConfigDrawer } from '@/components/config-drawer'
+import { LanguageSwitch } from '@/components/language-switch'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
@@ -9,25 +11,27 @@ import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { SidebarNav } from './components/sidebar-nav'
 
-const sidebarNavItems = [
-  {
-    title: 'Appearance',
-    href: '/settings/appearance',
-    icon: <Palette size={18} />,
-  },
-  {
-    title: 'Display',
-    href: '/settings/display',
-    icon: <Monitor size={18} />,
-  },
-]
-
 export function Settings() {
+  const { t } = useI18n()
+  const sidebarNavItems = [
+    {
+      title: t('nav.appearance'),
+      href: '/settings/appearance',
+      icon: <Palette size={18} />,
+    },
+    {
+      title: t('nav.display'),
+      href: '/settings/display',
+      icon: <Monitor size={18} />,
+    },
+  ]
+
   return (
     <>
       {/* ===== Top Heading ===== */}
       <Header>
         <Search className='me-auto' />
+        <LanguageSwitch />
         <ThemeSwitch />
         <ConfigDrawer />
         <ProfileDropdown />
@@ -36,11 +40,9 @@ export function Settings() {
       <Main fixed>
         <div className='space-y-0.5'>
           <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>
-            Settings
+            {t('settings.title')}
           </h1>
-          <p className='text-muted-foreground'>
-            Appearance and display preferences for this browser.
-          </p>
+          <p className='text-muted-foreground'>{t('settings.desc')}</p>
         </div>
         <Separator className='my-4 lg:my-6' />
         <div className='flex flex-1 flex-col space-y-2 overflow-hidden md:space-y-2 lg:flex-row lg:space-y-0 lg:space-x-12'>

@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { useI18n } from '@/i18n'
 import { ChevronsUpDown, LogOut, Palette } from 'lucide-react'
 import { getDisplayNameInitials } from '@/lib/utils'
 import useDialogState from '@/hooks/use-dialog-state'
@@ -30,6 +31,7 @@ type NavUserProps = {
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar()
   const [open, setOpen] = useDialogState()
+  const { t } = useI18n()
   const initial = getDisplayNameInitials(user.name || user.email)
 
   return (
@@ -78,7 +80,7 @@ export function NavUser({ user }: NavUserProps) {
                 <DropdownMenuItem asChild>
                   <Link to='/settings/appearance'>
                     <Palette />
-                    外観設定
+                    {t('profile.appearance')}
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -88,7 +90,7 @@ export function NavUser({ user }: NavUserProps) {
                 onClick={() => setOpen(true)}
               >
                 <LogOut />
-                ログアウト
+                {t('auth.signOut')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

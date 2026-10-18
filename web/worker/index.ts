@@ -28,6 +28,7 @@ const MAX_BODY_BYTES = 1_000_000
 
 type Admin = { id: number; email: string; name: string }
 
+// Messages the admin UI shows are i18n keys (src/i18n), translated in the browser.
 class HttpError extends Error {
   status: number
   constructor(status: number, message: string) {
@@ -88,7 +89,7 @@ async function auth(req: Request, env: Env, action?: string) {
   if (action === 'login' && req.method === 'POST') {
     const ip = req.headers.get('CF-Connecting-IP') ?? 'local'
     if (!(await env.LOGIN_LIMITER.limit({ key: ip })).success)
-      throw new HttpError(429, 'ログイン試行が多すぎます。1分後に再試行してください')
+      throw new HttpError(429, 'error.tooManyLogins')
     const { email, password } = await body(req, loginSchema)
     const row = await env.DB.prepare(
       'SELECT id, email, name, password_hash FROM admins WHERE email = ?'
@@ -97,7 +98,7 @@ async function auth(req: Request, env: Env, action?: string) {
       .first<Admin & { password_hash: string }>()
     const ok = await verifyPassword(password, row?.password_hash ?? DUMMY_HASH)
     if (!row || !ok)
-      throw new HttpError(401, 'メールアドレスまたはパスワードが違います')
+      throw new HttpError(401, 'error.badCredentials')
     const token = await signSession(row.id, env.SESSION_SECRET, SESSION_TTL_S)
     return json({ id: row.id, email: row.email, name: row.name }, 200, {
       'Set-Cookie': sessionCookie(token, SESSION_TTL_S),
@@ -118,16 +119,13 @@ async function setup(req: Request, env: Env) {
   }
   if (req.method === 'POST') {
     if (!env.SETUP_TOKEN)
-      throw new HttpError(
-        403,
-        'SETUP_TOKEN が未設定です。npx wrangler secret put SETUP_TOKEN で設定してください'
-      )
+      throw new HttpError(403, 'error.setupDisabled')
     const ip = req.headers.get('CF-Connecting-IP') ?? 'local'
     if (!(await env.LOGIN_LIMITER.limit({ key: `setup:${ip}` })).success)
-      throw new HttpError(429, '試行が多すぎます。1分後に再試行してください')
+      throw new HttpError(429, 'error.tooManyAttempts')
     const d = await body(req, setupSchema)
     if (!(await secretEquals(d.setup_code, env.SETUP_TOKEN)))
-      throw new HttpError(401, 'Setup code が違います')
+      throw new HttpError(401, 'error.badSetupCode')
     // Single statement, so two concurrent requests cannot both create an admin.
     const row = await env.DB.prepare(
       `INSERT INTO admins (email, name, password_hash)
@@ -137,7 +135,7 @@ async function setup(req: Request, env: Env) {
       .bind(d.email, d.name, await hashPassword(d.password))
       .first<Admin>()
     if (!row)
-      throw new HttpError(409, '初期設定は完了しています。ログインしてください')
+      throw new HttpError(409, 'error.setupDone')
     // Only the request that created the admin gets here, so a losing race cannot rename the site.
     await saveSiteName(env, d.site_name)
     const token = await signSession(row.id, env.SESSION_SECRET, SESSION_TTL_S)
@@ -177,7 +175,7 @@ async function admins(req: Request, env: Env, me: Admin, id?: string) {
   }
   if (id && req.method === 'DELETE') {
     if (Number(id) === me.id)
-      throw new HttpError(400, '自分自身は削除できません')
+      throw new HttpError(400, 'error.cannotDeleteSelf')
     return deleted(
       await env.DB.prepare('DELETE FROM admins WHERE id = ?').bind(Number(id)).run()
     )
@@ -482,9 +480,9 @@ export default {
       if (e instanceof HttpError) return json({ title: e.message }, e.status)
       const msg = String(e)
       if (msg.includes('FOREIGN KEY'))
-        return json({ title: '参照先が存在しないか、他のデータから参照されています' }, 409)
+        return json({ title: 'error.fkConflict' }, 409)
       if (msg.includes('UNIQUE'))
-        return json({ title: '同じIDまたはメールアドレスが既に存在します' }, 409)
+        return json({ title: 'error.duplicate' }, 409)
       // Workers Logs collects console output.
       // eslint-disable-next-line no-console
       console.error(JSON.stringify({ msg: 'unhandled error', error: msg }))

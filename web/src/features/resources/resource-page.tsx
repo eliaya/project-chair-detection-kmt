@@ -3,6 +3,7 @@ import { type z } from 'zod'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type ColumnDef } from '@tanstack/react-table'
+import { type I18n, type Key, useI18n } from '@/i18n'
 import { KeyRound, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, listQuery } from '@/lib/api'
@@ -33,16 +34,18 @@ type Row = Record<string, unknown> & { id: string | number }
 export type ResourceDef = {
   // API path and query key, e.g. 'zones' -> /api/zones
   key: string
-  title: string
-  description: string
+  title: Key
+  // Singular noun for the add/edit dialog titles
+  item: Key
+  description: Key
   fields: Field[]
   createSchema: z.ZodType
   updateSchema?: z.ZodType
   defaults?: Record<string, unknown>
   columns: {
     key: string
-    title: string
-    format?: (value: unknown, row: Row) => string
+    title: Key
+    format?: (value: unknown, row: Row, i18n: I18n) => string
   }[]
   // Adds "re-issue token" (POST /api/<key>/<id>/token)
   tokenRotation?: boolean
@@ -52,6 +55,8 @@ type DialogState = { type: 'form' | 'delete' | 'rotate'; row?: Row } | null
 
 export function ResourcePage({ def }: { def: ResourceDef }) {
   const queryClient = useQueryClient()
+  const i18n = useI18n()
+  const { t } = i18n
   const { data = [] } = useQuery(listQuery<Row>(def.key))
   const [dialog, setDialog] = useState<DialogState>(null)
   const [token, setToken] = useState<string | null>(null)
@@ -68,19 +73,19 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
         : api.post(`/${def.key}`, values)
       ).then((r) => r.data),
     onSuccess: (data) => {
-      done('保存しました')
+      done(t('common.saved'))
       if (data?.token) setToken(data.token)
     },
   })
   const remove = useMutation({
     mutationFn: (row: Row) => api.delete(`/${def.key}/${row.id}`),
-    onSuccess: () => done('削除しました'),
+    onSuccess: () => done(t('common.deleted')),
   })
   const rotate = useMutation({
     mutationFn: (row: Row) =>
       api.post(`/${def.key}/${row.id}/token`).then((r) => r.data),
     onSuccess: (data) => {
-      done('トークンを再発行しました')
+      done(t('resource.rotated'))
       setToken(data.token)
     },
   })
@@ -89,9 +94,9 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
     ...def.columns.map((c): ColumnDef<Row> => ({
       id: c.key,
       accessorFn: (r) =>
-        c.format ? c.format(r[c.key], r) : String(r[c.key] ?? ''),
+        c.format ? c.format(r[c.key], r, i18n) : String(r[c.key] ?? ''),
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={c.title} />
+        <DataTableColumnHeader column={column} title={t(c.title)} />
       ),
     })),
     {
@@ -101,20 +106,20 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
           <DropdownMenuTrigger asChild>
             <Button variant='ghost' className='size-8 p-0'>
               <DotsHorizontalIcon className='size-4' />
-              <span className='sr-only'>操作</span>
+              <span className='sr-only'>{t('common.actions')}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
             <DropdownMenuItem
               onClick={() => setDialog({ type: 'form', row: row.original })}
             >
-              <Pencil /> 編集
+              <Pencil /> {t('common.edit')}
             </DropdownMenuItem>
             {def.tokenRotation && (
               <DropdownMenuItem
                 onClick={() => setDialog({ type: 'rotate', row: row.original })}
               >
-                <KeyRound /> トークン再発行
+                <KeyRound /> {t('resource.rotate')}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
@@ -122,7 +127,7 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
               variant='destructive'
               onClick={() => setDialog({ type: 'delete', row: row.original })}
             >
-              <Trash2 /> 削除
+              <Trash2 /> {t('common.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -135,11 +140,11 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
 
   return (
     <PageShell
-      title={def.title}
-      description={def.description}
+      title={t(def.title)}
+      description={t(def.description)}
       actions={
         <Button onClick={() => setDialog({ type: 'form' })}>
-          <Plus /> 追加
+          <Plus /> {t('common.add')}
         </Button>
       }
     >
@@ -152,9 +157,11 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
         <DialogContent className='sm:max-w-lg'>
           <DialogHeader className='text-start'>
             <DialogTitle>
-              {row ? `${def.title}を編集` : `${def.title}を追加`}
+              {t(row ? 'resource.editTitle' : 'resource.addTitle', {
+                name: t(def.item),
+              })}
             </DialogTitle>
-            <DialogDescription>{def.description}</DialogDescription>
+            <DialogDescription>{t(def.description)}</DialogDescription>
           </DialogHeader>
           {dialog?.type === 'form' && (
             <div className='max-h-[60vh] overflow-y-auto px-0.5 py-1'>
@@ -178,7 +185,7 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
               form='resource-form'
               disabled={save.isPending}
             >
-              保存
+              {t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -188,10 +195,10 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
         <ConfirmDialog
           open={dialog?.type === 'delete'}
           onOpenChange={(open) => !open && setDialog(null)}
-          title='削除'
-          desc={`「${label}」を削除しますか？この操作は取り消せません。`}
-          cancelBtnText='キャンセル'
-          confirmText='削除'
+          title={t('common.delete')}
+          desc={t('resource.deleteDesc', { label })}
+          cancelBtnText={t('common.cancel')}
+          confirmText={t('common.delete')}
           destructive
           isLoading={remove.isPending}
           handleConfirm={() => remove.mutate(row)}
@@ -201,10 +208,10 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
         <ConfirmDialog
           open={dialog?.type === 'rotate'}
           onOpenChange={(open) => !open && setDialog(null)}
-          title='トークン再発行'
-          desc={`「${label}」の現在のトークンはすぐに無効になります。Pi の API_TOKEN を更新してください。`}
-          cancelBtnText='キャンセル'
-          confirmText='再発行'
+          title={t('resource.rotate')}
+          desc={t('resource.rotateDesc', { label })}
+          cancelBtnText={t('common.cancel')}
+          confirmText={t('resource.rotateConfirm')}
           isLoading={rotate.isPending}
           handleConfirm={() => rotate.mutate(row)}
         />
@@ -213,11 +220,8 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
       <Dialog open={!!token} onOpenChange={(open) => !open && setToken(null)}>
         <DialogContent>
           <DialogHeader className='text-start'>
-            <DialogTitle>API トークン</DialogTitle>
-            <DialogDescription>
-              このトークンは二度と表示されません。Pi の環境変数 API_TOKEN
-              に設定してください。
-            </DialogDescription>
+            <DialogTitle>{t('resource.tokenTitle')}</DialogTitle>
+            <DialogDescription>{t('resource.tokenDesc')}</DialogDescription>
           </DialogHeader>
           <code className='rounded-md bg-muted p-3 font-mono text-sm break-all select-all'>
             {token}
@@ -227,10 +231,10 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
               onClick={() =>
                 navigator.clipboard
                   .writeText(token ?? '')
-                  .then(() => toast.success('コピーしました'))
+                  .then(() => toast.success(t('common.copied')))
               }
             >
-              コピー
+              {t('common.copy')}
             </Button>
           </DialogFooter>
         </DialogContent>

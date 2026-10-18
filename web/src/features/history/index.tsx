@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type ColumnDef, type Table } from '@tanstack/react-table'
+import { type I18n, useI18n } from '@/i18n'
 import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { seatStatusLabel } from '@/lib/seat-status'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -31,7 +31,7 @@ const eventsQuery = {
     api.get<Event[]>('/occupancy/events?limit=500').then((r) => r.data),
 }
 
-const columns: ColumnDef<Event>[] = [
+const columns = ({ t, lang }: I18n): ColumnDef<Event>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -41,14 +41,14 @@ const columns: ColumnDef<Event>[] = [
           (table.getIsSomePageRowsSelected() && 'indeterminate')
         }
         onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
-        aria-label='すべて選択'
+        aria-label={t('table.selectAll')}
       />
     ),
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(v) => row.toggleSelected(!!v)}
-        aria-label='行を選択'
+        aria-label={t('table.selectRow')}
       />
     ),
     enableSorting: false,
@@ -56,49 +56,53 @@ const columns: ColumnDef<Event>[] = [
   {
     accessorKey: 'ts',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='日時' />
+      <DataTableColumnHeader column={column} title={t('history.time')} />
     ),
-    cell: ({ row }) => new Date(row.original.ts).toLocaleString('ja-JP'),
+    cell: ({ row }) => new Date(row.original.ts).toLocaleString(lang),
     enableGlobalFilter: false,
   },
   {
     accessorKey: 'seat_id',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='卓' />
+      <DataTableColumnHeader column={column} title={t('history.table')} />
     ),
   },
   {
     accessorKey: 'device_id',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='デバイス' />
+      <DataTableColumnHeader column={column} title={t('field.device')} />
     ),
   },
   {
     accessorKey: 'status',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='状態' />
+      <DataTableColumnHeader column={column} title={t('history.status')} />
     ),
-    cell: ({ row }) => seatStatusLabel[row.original.status],
+    cell: ({ row }) => t(`status.${row.original.status}`),
     filterFn: (row, id, value: string[]) => value.includes(row.getValue(id)),
   },
 ]
 
 export function History() {
   const { data = [] } = useQuery(eventsQuery)
+  const i18n = useI18n()
+  const { t } = i18n
+  // TanStack Table needs a stable columns reference.
+  const cols = useMemo(() => columns(i18n), [i18n])
 
   return (
-    <PageShell title='履歴' description='卓の状態が変化した記録（最新500件）'>
+    <PageShell title={t('nav.history')} description={t('history.desc')}>
       <DataTable
-        columns={columns}
+        columns={cols}
         data={data}
-        searchPlaceholder='卓・デバイスで絞り込み...'
+        searchPlaceholder={t('history.searchPlaceholder')}
         filters={[
           {
             columnId: 'status',
-            title: '状態',
+            title: t('history.status'),
             options: seatStatuses.map((s) => ({
               value: s,
-              label: seatStatusLabel[s],
+              label: t(`status.${s}`),
             })),
           },
         ]}
@@ -111,6 +115,7 @@ export function History() {
 function BulkDelete({ table }: { table: Table<Event> }) {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const ids = table.getFilteredSelectedRowModel().rows.map((r) => r.original.id)
   const remove = useMutation({
     mutationFn: () => api.delete('/occupancy/events', { data: { ids } }),
@@ -118,24 +123,24 @@ function BulkDelete({ table }: { table: Table<Event> }) {
       queryClient.invalidateQueries({ queryKey: eventsQuery.queryKey })
       table.resetRowSelection()
       setOpen(false)
-      toast.success(`${ids.length}件を削除しました`)
+      toast.success(t('history.deleted', { count: ids.length }))
     },
   })
 
   return (
     <>
-      <DataTableBulkActions table={table} entityName='event'>
+      <DataTableBulkActions table={table}>
         <Button variant='destructive' size='sm' onClick={() => setOpen(true)}>
-          <Trash2 /> 削除
+          <Trash2 /> {t('common.delete')}
         </Button>
       </DataTableBulkActions>
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}
-        title='履歴の削除'
-        desc={`選択した${ids.length}件を削除しますか？この操作は取り消せません。`}
-        cancelBtnText='キャンセル'
-        confirmText='削除'
+        title={t('history.deleteTitle')}
+        desc={t('history.deleteDesc', { count: ids.length })}
+        cancelBtnText={t('common.cancel')}
+        confirmText={t('common.delete')}
         destructive
         isLoading={remove.isPending}
         handleConfirm={() => remove.mutate()}

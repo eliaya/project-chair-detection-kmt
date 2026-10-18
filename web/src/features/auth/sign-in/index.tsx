@@ -1,4 +1,5 @@
 import { useSearch } from '@tanstack/react-router'
+import { useI18n } from '@/i18n'
 import {
   Card,
   CardContent,
@@ -11,17 +12,16 @@ import { UserAuthForm } from './components/user-auth-form'
 
 export function SignIn() {
   const { redirect } = useSearch({ from: '/(auth)/sign-in' })
+  const { t } = useI18n()
 
   return (
     <AuthLayout>
       <Card className='max-w-sm gap-4'>
         <CardHeader>
           <CardTitle className='text-lg tracking-tight'>
-            管理者ログイン
+            {t('auth.signInTitle')}
           </CardTitle>
-          <CardDescription>
-            アカウントは既存の管理者が「管理者」画面で作成します。
-          </CardDescription>
+          <CardDescription>{t('auth.signInDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <UserAuthForm redirectTo={redirect} />

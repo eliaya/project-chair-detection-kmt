@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { useI18n } from '@/i18n'
 import { Menu, X } from 'lucide-react'
 import { siteNameQuery } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -14,6 +15,7 @@ import { Button } from '../ui/button'
 export function AppTitle() {
   const { setOpenMobile } = useSidebar()
   const { data: siteName } = useQuery(siteNameQuery)
+  const { t } = useI18n()
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -29,9 +31,9 @@ export function AppTitle() {
               className='grid flex-1 text-start text-sm leading-tight'
             >
               <span className='truncate font-bold'>
-                {siteName ?? 'テーブル稼働監視'}
+                {siteName ?? t('app.title')}
               </span>
-              <span className='truncate text-xs'>管理画面</span>
+              <span className='truncate text-xs'>{t('app.subtitle')}</span>
             </Link>
             <ToggleSidebar />
           </div>
