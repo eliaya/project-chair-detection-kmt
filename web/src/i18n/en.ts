@@ -228,8 +228,28 @@ export const en = {
   'resource.rotateDesc':
     'The current token of "{label}" stops working immediately. Update API_TOKEN on the Pi.',
   'resource.tokenTitle': 'API token',
+  'field.status': 'Status',
+  'field.health': 'Details',
+  'deviceStatus.not_connected': 'Not connected',
+  'deviceStatus.starting': 'Starting',
+  'deviceStatus.online': 'Online',
+  'deviceStatus.offline': 'Offline',
+  'deviceStatus.camera_error': 'Camera error',
+  'cameraStatus.ok': 'OK',
+  'cameraStatus.open_failed': 'Cannot open',
+  'cameraStatus.read_failed': 'No image',
+  'cameraStatus.not_reported': 'Not reported (restart main.py)',
+  'cameraStatus.offline': 'Pi offline',
+  'devices.healthDetail': 'v{version} · {ms} ms/frame · {queue} unsent',
+  'connect.waiting': 'Waiting for the Pi to connect…',
+  'connect.hint':
+    'Not connecting? Check the log on the Pi: journalctl -u kmt-occupancy -f',
+  'connect.starting': 'The Pi fetched its config and is starting.',
+  'connect.online': 'Connected. The Pi is sending data.',
+  'connect.cameraError': 'Connected, but a camera has a problem: {cameras}',
+  'dashboard.cameraProblem': 'Camera {camera}: {status}',
   'resource.tokenDesc':
-    'This token will not be shown again. Set it as the API_TOKEN environment variable on the Pi.',
+    'This token will not be shown again. On the Pi, put these two lines in /etc/kmt-occupancy.env and run sudo systemctl restart kmt-occupancy.',
 
   'admins.desc': 'Accounts that can sign in to this admin console.',
   'admins.passwordHint':

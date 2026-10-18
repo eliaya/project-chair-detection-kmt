@@ -216,8 +216,28 @@ export const zhCN: Dict = {
   'resource.rotateDesc':
     '“{label}”当前的令牌将立即失效，请更新 Pi 上的 API_TOKEN。',
   'resource.tokenTitle': 'API 令牌',
+  'field.status': '状态',
+  'field.health': '详细信息',
+  'deviceStatus.not_connected': '未连接',
+  'deviceStatus.starting': '启动中',
+  'deviceStatus.online': '在线',
+  'deviceStatus.offline': '离线',
+  'deviceStatus.camera_error': '摄像头异常',
+  'cameraStatus.ok': '正常',
+  'cameraStatus.open_failed': '无法打开',
+  'cameraStatus.read_failed': '无法获取图像',
+  'cameraStatus.not_reported': '未上报（请重启 main.py）',
+  'cameraStatus.offline': 'Pi 离线',
+  'devices.healthDetail': 'v{version} · 推理 {ms}ms · 未发送 {queue} 条',
+  'connect.waiting': '等待 Pi 连接…',
+  'connect.hint':
+    '若无法连接，请在 Pi 上查看日志：journalctl -u kmt-occupancy -f',
+  'connect.starting': 'Pi 已获取配置，正在启动。',
+  'connect.online': '已连接，正在接收 Pi 的数据。',
+  'connect.cameraError': '已连接，但摄像头有问题：{cameras}',
+  'dashboard.cameraProblem': '摄像头 {camera}：{status}',
   'resource.tokenDesc':
-    '此令牌不会再次显示，请设置为 Pi 的环境变量 API_TOKEN。',
+    '此令牌不会再次显示。请在 Pi 的 /etc/kmt-occupancy.env 写入以下两行，然后运行 sudo systemctl restart kmt-occupancy。',
 
   'admins.desc': '可以登录此管理后台的账号。',
   'admins.passwordHint':

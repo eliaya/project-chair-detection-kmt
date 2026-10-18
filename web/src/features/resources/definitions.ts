@@ -1,11 +1,19 @@
+import { createElement } from 'react'
 import { type I18n } from '@/i18n'
 import {
   adminCreateSchema,
   adminUpdateSchema,
   cameraSchema,
   deviceSchema,
+  type Health,
   zoneSchema,
 } from '../../../shared/schemas'
+import {
+  CameraBadge,
+  type CameraStatus,
+  DeviceBadge,
+  type DeviceStatus,
+} from './connection'
 import { type ResourceDef } from './resource-page'
 
 const datetime = (v: unknown, _: unknown, { lang }: I18n) =>
@@ -52,10 +60,32 @@ export const resources = {
     columns: [
       { key: 'id', title: 'field.id' },
       { key: 'name', title: 'field.name' },
+      {
+        key: 'status',
+        title: 'field.status',
+        format: (v, _, { t }) => t(`deviceStatus.${v as DeviceStatus}`),
+        cell: (r) =>
+          createElement(DeviceBadge, { status: r.status as DeviceStatus }),
+      },
+      {
+        key: 'health',
+        title: 'field.health',
+        format: (v, _, { t }) => {
+          const h = v as Health | null
+          return h?.version
+            ? t('devices.healthDetail', {
+                version: h.version,
+                ms: h.infer_ms ?? '—',
+                queue: h.queue ?? '—',
+              })
+            : '—'
+        },
+      },
       { key: 'last_seen_at', title: 'field.lastSeen', format: datetime },
       { key: 'created_at', title: 'field.createdAt', format: datetime },
     ],
     tokenRotation: true,
+    refetchInterval: 5000,
   },
   cameras: {
     key: 'cameras',
@@ -91,7 +121,15 @@ export const resources = {
         title: 'field.resolution',
         format: (_, r) => `${r.width}×${r.height}`,
       },
+      {
+        key: 'status',
+        title: 'field.status',
+        format: (v, _, { t }) => t(`cameraStatus.${v as CameraStatus}`),
+        cell: (r) =>
+          createElement(CameraBadge, { status: r.status as CameraStatus }),
+      },
     ],
+    refetchInterval: 5000,
   },
   zones: {
     key: 'zones',

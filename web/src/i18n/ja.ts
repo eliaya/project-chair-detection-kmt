@@ -224,8 +224,28 @@ export const ja: Dict = {
   'resource.rotateDesc':
     '「{label}」の現在のトークンはすぐに無効になります。Pi の API_TOKEN を更新してください。',
   'resource.tokenTitle': 'API トークン',
+  'field.status': '状態',
+  'field.health': '詳細',
+  'deviceStatus.not_connected': '未接続',
+  'deviceStatus.starting': '起動中',
+  'deviceStatus.online': 'オンライン',
+  'deviceStatus.offline': 'オフライン',
+  'deviceStatus.camera_error': 'カメラ異常',
+  'cameraStatus.ok': '正常',
+  'cameraStatus.open_failed': '開けません',
+  'cameraStatus.read_failed': '映像を取得できません',
+  'cameraStatus.not_reported': '未報告（main.py を再起動）',
+  'cameraStatus.offline': 'Pi オフライン',
+  'devices.healthDetail': 'v{version} · 推論 {ms}ms · 未送信 {queue}件',
+  'connect.waiting': 'Pi の接続を待っています…',
+  'connect.hint':
+    '接続しない場合は Pi でログを確認してください: journalctl -u kmt-occupancy -f',
+  'connect.starting': 'Pi が設定を取得しました。起動中です。',
+  'connect.online': '接続しました。Pi からデータを受信しています。',
+  'connect.cameraError': '接続しましたが、カメラに問題があります: {cameras}',
+  'dashboard.cameraProblem': 'カメラ {camera}: {status}',
   'resource.tokenDesc':
-    'このトークンは二度と表示されません。Pi の環境変数 API_TOKEN に設定してください。',
+    'このトークンは二度と表示されません。Pi の /etc/kmt-occupancy.env に次の2行を書き、sudo systemctl restart kmt-occupancy を実行してください。',
 
   'admins.desc': 'この管理画面にログインできるアカウントです。',
   'admins.passwordHint':

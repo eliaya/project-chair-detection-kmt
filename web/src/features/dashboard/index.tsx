@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { PageShell } from '@/components/layout/page-shell'
+import { type CameraStatus } from '@/features/resources/connection'
 import { type SeatStatus, type zoneSchema } from '../../../shared/schemas'
 
 type Zone = z.infer<typeof zoneSchema>
@@ -25,11 +26,13 @@ type Current = {
     status: SeatStatus
     since: string
   }[]
-  devices: { id: string; last_seen_at: string | null }[]
+  // Judged by the Worker: Pi offline (90 s) or camera failure.
+  cameras: { id: string; status: CameraStatus }[]
 }
 
-// Research plan: seats of a device silent for 90 s are shown as unknown.
-const OFFLINE_MS = 90_000
+// Seats are only trusted while their camera works; "not_reported" means main.py
+// predates the camera and still judges it from config it fetched earlier.
+const trusted: CameraStatus[] = ['ok', 'not_reported']
 
 const statusClass: Record<TableStatus, string> = {
   empty:
@@ -69,40 +72,41 @@ export function Dashboard() {
     refetchInterval: 5000,
   })
 
-  // Server time, so a skewed browser clock does not mark devices offline.
+  // Server time, so a skewed browser clock does not skew the timers.
   const now = current.data ? Date.parse(current.data.now) : 0
   const seats = new Map(current.data?.seats.map((s) => [s.seat_id, s]))
-  const lastSeen = new Map(
-    current.data?.devices.map((d) => [d.id, d.last_seen_at])
+  const cameraStatus = new Map(
+    current.data?.cameras.map((c) => [c.id, c.status])
   )
   // main.py reports seat j of table i as "<zone id>_t<ii>_s<jj>".
-  const zoneTables = (zones.data ?? []).map((zone) => ({
-    zone,
-    tables: zone.seats.map((tableSeats, i) => {
-      const seatStates = tableSeats.map((seat, j) => {
-        const s = seats.get(`${zone.id}_t${pad(i)}_s${pad(j)}`)
-        const seen = s && lastSeen.get(s.device_id)
-        const status: TableStatus =
-          s && seen && now - Date.parse(seen) <= OFFLINE_MS
-            ? s.status
-            : 'unknown'
-        return { name: seat.name, status, since: s?.since }
-      })
-      const seated = seatStates.filter((s) => isSeated(s.status))
-      return {
-        seats: seatStates,
-        status: tablePriority.find((p) =>
-          seatStates.some((s) => s.status === p)
-        )!,
-        seated: seated.length,
-        // In use since the first of its current guests sat down.
-        since: seated
-          .map((s) => s.since)
-          .filter(Boolean)
-          .sort()[0],
-      }
-    }),
-  }))
+  const zoneTables = (zones.data ?? []).map((zone) => {
+    const camera = cameraStatus.get(zone.camera_id) ?? 'offline'
+    return {
+      zone,
+      camera,
+      tables: zone.seats.map((tableSeats, i) => {
+        const seatStates = tableSeats.map((seat, j) => {
+          const s = seats.get(`${zone.id}_t${pad(i)}_s${pad(j)}`)
+          const status: TableStatus =
+            s && trusted.includes(camera) ? s.status : 'unknown'
+          return { name: seat.name, status, since: s?.since }
+        })
+        const seated = seatStates.filter((s) => isSeated(s.status))
+        return {
+          seats: seatStates,
+          status: tablePriority.find((p) =>
+            seatStates.some((s) => s.status === p)
+          )!,
+          seated: seated.length,
+          // In use since the first of its current guests sat down.
+          since: seated
+            .map((s) => s.since)
+            .filter(Boolean)
+            .sort()[0],
+        }
+      }),
+    }
+  })
   const all = zoneTables.flatMap((z) => z.tables)
   const inUse = all.filter((table) => isSeated(table.status)).length
   const unknown = all.filter((table) => table.status === 'unknown').length
@@ -139,11 +143,19 @@ export function Dashboard() {
         </Card>
       )}
 
-      {zoneTables.map(({ zone, tables }) => (
+      {zoneTables.map(({ zone, camera, tables }) => (
         <Card key={zone.id}>
           <CardHeader>
             <CardTitle>{zone.id}</CardTitle>
             <CardDescription>{zone.description}</CardDescription>
+            {!trusted.includes(camera) && (
+              <p className='text-sm text-red-700 dark:text-red-300'>
+                {t('dashboard.cameraProblem', {
+                  camera: zone.camera_id,
+                  status: t(`cameraStatus.${camera}`),
+                })}
+              </p>
+            )}
           </CardHeader>
           <CardContent className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'>
             {tables.map((table, i) => (

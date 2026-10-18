@@ -85,6 +85,9 @@ npx wrangler secret put SETUP_TOKEN         # 最初の管理者の作成に使�
 
 5. **起動**: `/etc/kmt-occupancy.env` に `API_TOKEN` と `CONFIG_URL=https://<worker のドメイン>/api/config` を書き、
    `sudo systemctl restart kmt-occupancy`（ログ: `journalctl -u kmt-occupancy -f`）。
+   管理画面の「デバイス」で状態が「オンライン」になれば接続完了です（トークン発行時のダイアログも自動で
+   「接続しました」に変わります）。「カメラ異常」なら「カメラ」画面で原因（開けません／映像を取得できません）を
+   確認します。そのカメラの座席はダッシュボードで「不明」になります。カメラを追加したら main.py を再起動します。
 
 設定は起動時に取得してキャッシュし（`config.cache.json`）、取得できないときはキャッシュ、なければ `config.json`
 を使います。送信できなかった状態変化は `queue.db` に保存し、復旧後に古い順に再送します。設定変更は

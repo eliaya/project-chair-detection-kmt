@@ -70,12 +70,15 @@ assert.equal((await call('POST', '/api/zones', { ...zone, id: 'smoke-zone2', sea
 assert.equal((await call('DELETE', '/api/devices/smoke-pi')).status, 409)
 step('device / camera / zone CRUD, duplicate, FK and validation errors')
 
+const device = async () => (await call('GET', '/api/devices')).data.find((d: { id: string }) => d.id === 'smoke-pi')
+assert.equal((await device()).status, 'not_connected')
 assert.equal((await call('GET', '/api/config', undefined, 'bad-token')).status, 401)
 const cfg = (await call('GET', '/api/config', undefined, dev.data.token)).data
 assert.deepEqual(cfg.cameras, [{ id: 'smoke-cam', device: '/dev/video0', fps: 1, resolution: [1920, 1080] }])
 assert.deepEqual(cfg.zones, [{ id: 'smoke-zone', camera: 'smoke-cam', description: 'edited', seats: zone.seats }])
 assert.equal(typeof cfg.thresholds.confidence, 'number')
 assert.equal(cfg.cloud.api_url, `${base}/api/occupancy`)
+assert.equal((await device()).status, 'starting')
 step('device config has config.json shape')
 
 const post = (occupancy: object, timestamp: string) =>
@@ -89,11 +92,30 @@ assert.equal((await post({ [s0]: { status: 'empty' } }, hourAgo)).data.changed, 
 assert.equal((await post({ [s0]: { status: 'bogus' } }, now)).status, 400)
 const cur = (await call('GET', '/api/occupancy/current')).data
 assert.equal(cur.seats.find((s: { seat_id: string }) => s.seat_id === s0).status, 'occupied')
-assert.ok(cur.devices.find((d: { id: string }) => d.id === 'smoke-pi').last_seen_at)
+assert.ok((await device()).last_seen_at)
 const events = (await call('GET', '/api/occupancy/events')).data.filter((e: { seat_id: string }) => e.seat_id.startsWith('smoke-zone'))
 assert.equal(events.length, 3)
 assert.equal((await call('DELETE', '/api/occupancy/events', { ids: events.map((e: { id: number }) => e.id) })).data.deleted, 3)
 step('occupancy: change-only writes, stale payload does not overwrite, events deletable')
+
+const health = (cam: string) => call('POST', '/api/occupancy', { occupancy: {}, health: { version: 'smoke', queue: 0, infer_ms: 12, cameras: { 'smoke-cam': cam } } }, dev.data.token)
+const camStatus = async () => (await call('GET', '/api/cameras')).data.find((c: { id: string }) => c.id === 'smoke-cam').status
+await health('ok')
+assert.equal((await device()).status, 'online')
+assert.equal((await device()).health.infer_ms, 12)
+assert.equal(await camStatus(), 'ok')
+await health('open_failed')
+assert.equal((await device()).status, 'camera_error')
+assert.equal(await camStatus(), 'open_failed')
+const curCam = (await call('GET', '/api/occupancy/current')).data.cameras.find((c: { id: string }) => c.id === 'smoke-cam')
+assert.equal(curCam.status, 'open_failed')
+// Malformed health is dropped; the seat update in the same payload still lands.
+const bad = await call('POST', '/api/occupancy', { occupancy: { [s1]: { status: 'occupied' } }, health: { cameras: { 'smoke-cam': 'bogus' } } }, dev.data.token)
+assert.equal(bad.data.changed, 1)
+assert.equal(await camStatus(), 'open_failed')
+const leftover = (await call('GET', '/api/occupancy/events')).data.filter((e: { seat_id: string }) => e.seat_id.startsWith('smoke-zone'))
+assert.equal((await call('DELETE', '/api/occupancy/events', { ids: leftover.map((e: { id: number }) => e.id) })).data.deleted, 1)
+step('device health: not connected → starting → online / camera error')
 
 const rotated = (await call('POST', '/api/devices/smoke-pi/token')).data.token
 assert.equal((await call('GET', '/api/config', undefined, dev.data.token)).status, 401)

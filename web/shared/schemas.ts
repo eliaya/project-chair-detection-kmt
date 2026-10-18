@@ -75,12 +75,29 @@ export const thresholdsSchema = z.object({
   staff_speed_px: z.number().min(0).max(10000),
 })
 
+const cameraHealthStatuses = ['ok', 'open_failed', 'read_failed'] as const
+
+// Sent by main.py with each heartbeat.
+const healthSchema = z
+  .object({
+    version: z.string().max(32),
+    queue: z.number().int().min(0),
+    infer_ms: z.number().min(0),
+    cameras: z
+      .record(z.string().max(64), z.enum(cameraHealthStatuses))
+      .refine((c) => Object.keys(c).length <= 16),
+  })
+  .partial()
+export type Health = z.infer<typeof healthSchema>
+
 // Body POSTed by main.py CloudSync; extra per-seat fields are ignored.
 export const occupancyPayloadSchema = z.object({
   timestamp: z.string().max(64).optional(),
   occupancy: z
     .record(z.string().max(64), z.object({ status: z.enum(seatStatuses) }))
     .refine((o) => Object.keys(o).length <= 500, 'too many seats'),
+  // Malformed health is dropped rather than rejecting the seat updates with it.
+  health: healthSchema.optional().catch(undefined),
 })
 
 export const loginSchema = z.object({

@@ -26,6 +26,7 @@ import {
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { PageShell } from '@/components/layout/page-shell'
+import { type Device, DeviceConnection } from './connection'
 import { DataTable } from './data-table'
 import { type Field, FieldsForm } from './fields-form'
 
@@ -45,10 +46,14 @@ export type ResourceDef = {
   columns: {
     key: string
     title: Key
+    // Text for sorting and search; cell, if given, is what is shown.
     format?: (value: unknown, row: Row, i18n: I18n) => string
+    cell?: (row: Row, i18n: I18n) => React.ReactNode
   }[]
-  // Adds "re-issue token" (POST /api/<key>/<id>/token)
+  // Adds "re-issue token" (POST /api/<key>/<id>/token) and the Pi connection check
   tokenRotation?: boolean
+  // Polls the list, for live statuses
+  refetchInterval?: number
 }
 
 type DialogState = { type: 'form' | 'delete' | 'rotate'; row?: Row } | null
@@ -57,9 +62,13 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
   const queryClient = useQueryClient()
   const i18n = useI18n()
   const { t } = i18n
-  const { data = [] } = useQuery(listQuery<Row>(def.key))
+  const { data = [] } = useQuery({
+    ...listQuery<Row>(def.key),
+    refetchInterval: def.refetchInterval,
+  })
   const [dialog, setDialog] = useState<DialogState>(null)
-  const [token, setToken] = useState<string | null>(null)
+  // A new or re-issued token, with the device row as it was when issued
+  const [token, setToken] = useState<{ token: string; row: Row } | null>(null)
 
   const done = (message: string) => {
     queryClient.invalidateQueries({ queryKey: [def.key] })
@@ -74,7 +83,7 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
       ).then((r) => r.data),
     onSuccess: (data) => {
       done(t('common.saved'))
-      if (data?.token) setToken(data.token)
+      if (data?.token) setToken({ token: data.token, row: data })
     },
   })
   const remove = useMutation({
@@ -86,7 +95,7 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
       api.post(`/${def.key}/${row.id}/token`).then((r) => r.data),
     onSuccess: (data) => {
       done(t('resource.rotated'))
-      setToken(data.token)
+      setToken({ token: data.token, row: data })
     },
   })
 
@@ -98,6 +107,7 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={t(c.title)} />
       ),
+      ...(c.cell && { cell: ({ row }) => c.cell!(row.original, i18n) }),
     })),
     {
       id: 'actions',
@@ -223,20 +233,15 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
             <DialogTitle>{t('resource.tokenTitle')}</DialogTitle>
             <DialogDescription>{t('resource.tokenDesc')}</DialogDescription>
           </DialogHeader>
-          <code className='rounded-md bg-muted p-3 font-mono text-sm break-all select-all'>
-            {token}
-          </code>
-          <DialogFooter>
-            <Button
-              onClick={() =>
-                navigator.clipboard
-                  .writeText(token ?? '')
-                  .then(() => toast.success(t('common.copied')))
+          {token && (
+            <DeviceConnection
+              token={token.token}
+              issued={token.row as unknown as Device}
+              current={
+                data.find((r) => r.id === token.row.id) as unknown as Device
               }
-            >
-              {t('common.copy')}
-            </Button>
-          </DialogFooter>
+            />
+          )}
         </DialogContent>
       </Dialog>
     </PageShell>

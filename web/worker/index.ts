@@ -7,6 +7,7 @@ import {
   idsSchema,
   loginSchema,
   occupancyPayloadSchema,
+  type Health,
   setupSchema,
   siteNameSchema,
   thresholdsSchema,
@@ -183,13 +184,59 @@ async function admins(req: Request, env: Env, me: Admin, id?: string) {
   throw new HttpError(404, 'Not Found')
 }
 
+// Research plan: a Pi silent for 90 s is offline and its seats are unknown.
+const OFFLINE_MS = 90_000
+
+type DeviceRow = {
+  id: string
+  last_seen_at: string | null
+  config_fetched_at: string | null
+  health: string | Health | null
+}
+
+// Judged on the Worker clock, so a skewed browser or Pi clock does not matter.
+function deviceStatus(d: DeviceRow, now: number) {
+  const recent = (t: string | null) => !!t && now - Date.parse(t) <= OFFLINE_MS
+  if (!d.last_seen_at && !d.config_fetched_at) return 'not_connected'
+  if (!recent(d.last_seen_at))
+    // Fetched its config, no heartbeat yet: main.py is starting.
+    return recent(d.config_fetched_at) &&
+      (!d.last_seen_at || d.config_fetched_at! > d.last_seen_at)
+      ? 'starting'
+      : 'offline'
+  const cams = (d.health as Health | null)?.cameras ?? {}
+  return Object.values(cams).some((s) => s !== 'ok') ? 'camera_error' : 'online'
+}
+
+function cameraStatus(cameraId: string, d: DeviceRow | undefined, now: number) {
+  const s = d ? deviceStatus(d, now) : 'not_connected'
+  if (s !== 'online' && s !== 'camera_error') return 'offline'
+  // A camera added after main.py started is reported after a restart.
+  return (d!.health as Health | null)?.cameras?.[cameraId] ?? 'not_reported'
+}
+
+const withStatus = (row: Record<string, unknown>, now = Date.now()) => {
+  const d = row as DeviceRow
+  const health = typeof d.health === 'string' ? JSON.parse(d.health) : d.health
+  return { ...row, health, status: deviceStatus({ ...d, health }, now) }
+}
+
+async function devicesById(env: Env) {
+  const { results } = await env.DB.prepare(
+    'SELECT id, last_seen_at, config_fetched_at, health FROM devices'
+  ).all<DeviceRow>()
+  return new Map(
+    results.map((d) => [d.id, withStatus(d) as unknown as DeviceRow])
+  )
+}
+
 async function devices(req: Request, env: Env, id?: string, action?: string) {
-  const cols = 'id, name, last_seen_at, created_at'
+  const cols = 'id, name, last_seen_at, config_fetched_at, health, created_at'
   if (!id && req.method === 'GET') {
     const { results } = await env.DB.prepare(
       `SELECT ${cols} FROM devices ORDER BY id`
     ).all()
-    return json(results)
+    return json(results.map((r) => withStatus(r)))
   }
   if (!id && req.method === 'POST') {
     const d = await body(req, deviceSchema)
@@ -200,7 +247,7 @@ async function devices(req: Request, env: Env, id?: string, action?: string) {
       .bind(d.id, d.name, await sha256(token))
       .first()
     // The plain token is returned only here and on rotation.
-    return json({ ...row, token }, 201)
+    return json({ ...withStatus(row!), token }, 201)
   }
   if (id && action === 'token' && req.method === 'POST') {
     const token = randomToken()
@@ -210,7 +257,7 @@ async function devices(req: Request, env: Env, id?: string, action?: string) {
       .bind(await sha256(token), id)
       .first()
     if (!row) throw new HttpError(404, 'Not Found')
-    return json({ ...row, token })
+    return json({ ...withStatus(row), token })
   }
   if (id && !action && req.method === 'PUT') {
     const d = await body(req, deviceSchema)
@@ -220,7 +267,7 @@ async function devices(req: Request, env: Env, id?: string, action?: string) {
       .bind(d.name, id)
       .first()
     if (!row) throw new HttpError(404, 'Not Found')
-    return json(row)
+    return json(withStatus(row))
   }
   if (id && !action && req.method === 'DELETE')
     return deleted(
@@ -254,7 +301,16 @@ async function crud(
     const { results } = await env.DB.prepare(
       `SELECT * FROM ${table} ORDER BY id`
     ).all()
-    return json(results.map(decode))
+    const rows = results.map(decode)
+    if (table !== 'cameras') return json(rows)
+    const devs = await devicesById(env)
+    const now = Date.now()
+    return json(
+      rows.map((c) => ({
+        ...c,
+        status: cameraStatus(c.id as string, devs.get(c.device_id as string), now),
+      }))
+    )
   }
   if (!id && req.method === 'POST') {
     const d = await body(req, schema)
@@ -342,14 +398,20 @@ async function siteName(req: Request, env: Env) {
 
 async function occupancy(req: Request, env: Env, url: URL, sub?: string) {
   if (sub === 'current' && req.method === 'GET') {
-    const [seats, devs] = await env.DB.batch([
+    const [seats, cams] = await env.DB.batch<Record<string, string>>([
       env.DB.prepare('SELECT * FROM seat_state ORDER BY seat_id'),
-      env.DB.prepare('SELECT id, name, last_seen_at FROM devices ORDER BY id'),
+      env.DB.prepare('SELECT id, device_id FROM cameras ORDER BY id'),
     ])
+    const devs = await devicesById(env)
+    const now = Date.now()
     return json({
-      now: new Date().toISOString(),
+      now: new Date(now).toISOString(),
       seats: seats.results,
-      devices: devs.results,
+      // Seats are only trusted while their camera reports "ok".
+      cameras: cams.results.map((c) => ({
+        id: c.id,
+        status: cameraStatus(c.id, devs.get(c.device_id), now),
+      })),
     })
   }
   if (sub === 'events' && req.method === 'GET') {
@@ -375,7 +437,11 @@ async function occupancy(req: Request, env: Env, url: URL, sub?: string) {
 
 // GET /api/config: same shape as config.json, limited to the calling device.
 async function deviceConfig(env: Env, deviceId: string, origin: string) {
-  const [cams, zones] = await env.DB.batch<Record<string, unknown>>([
+  const [, cams, zones] = await env.DB.batch<Record<string, unknown>>([
+    env.DB.prepare('UPDATE devices SET config_fetched_at = ? WHERE id = ?').bind(
+      new Date().toISOString(),
+      deviceId
+    ),
     env.DB.prepare('SELECT * FROM cameras WHERE device_id = ? ORDER BY id').bind(deviceId),
     env.DB.prepare(
       'SELECT z.* FROM zones z JOIN cameras c ON c.id = z.camera_id WHERE c.device_id = ? ORDER BY z.id'
@@ -420,10 +486,14 @@ async function ingest(req: Request, env: Env, deviceId: string) {
   const changed = ids.filter((id) => current.get(id) !== p.occupancy[id].status)
 
   const stmts = [
-    env.DB.prepare('UPDATE devices SET last_seen_at = ? WHERE id = ?').bind(
-      new Date(now).toISOString(),
-      deviceId
-    ),
+    p.health
+      ? env.DB.prepare(
+          'UPDATE devices SET last_seen_at = ?, health = ? WHERE id = ?'
+        ).bind(new Date(now).toISOString(), JSON.stringify(p.health), deviceId)
+      : env.DB.prepare('UPDATE devices SET last_seen_at = ? WHERE id = ?').bind(
+          new Date(now).toISOString(),
+          deviceId
+        ),
   ]
   for (const id of changed) {
     const status = p.occupancy[id].status

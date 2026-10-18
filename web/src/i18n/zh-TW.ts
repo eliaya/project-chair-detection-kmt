@@ -216,8 +216,28 @@ export const zhTW: Dict = {
   'resource.rotateDesc':
     '「{label}」目前的權杖將立即失效，請更新 Pi 上的 API_TOKEN。',
   'resource.tokenTitle': 'API 權杖',
+  'field.status': '狀態',
+  'field.health': '詳細資訊',
+  'deviceStatus.not_connected': '未連線',
+  'deviceStatus.starting': '啟動中',
+  'deviceStatus.online': '連線中',
+  'deviceStatus.offline': '離線',
+  'deviceStatus.camera_error': '攝影機異常',
+  'cameraStatus.ok': '正常',
+  'cameraStatus.open_failed': '無法開啟',
+  'cameraStatus.read_failed': '無法取得影像',
+  'cameraStatus.not_reported': '未回報（請重新啟動 main.py）',
+  'cameraStatus.offline': 'Pi 離線',
+  'devices.healthDetail': 'v{version} · 推論 {ms}ms · 未送出 {queue} 筆',
+  'connect.waiting': '等待 Pi 連線…',
+  'connect.hint':
+    '若無法連線，請在 Pi 上查看記錄：journalctl -u kmt-occupancy -f',
+  'connect.starting': 'Pi 已取得設定，正在啟動。',
+  'connect.online': '已連線，正在接收 Pi 的資料。',
+  'connect.cameraError': '已連線，但攝影機有問題：{cameras}',
+  'dashboard.cameraProblem': '攝影機 {camera}：{status}',
   'resource.tokenDesc':
-    '此權杖不會再次顯示，請設定為 Pi 的環境變數 API_TOKEN。',
+    '此權杖不會再次顯示。請在 Pi 的 /etc/kmt-occupancy.env 寫入以下兩行，再執行 sudo systemctl restart kmt-occupancy。',
 
   'admins.desc': '可以登入此管理後台的帳號。',
   'admins.passwordHint':
