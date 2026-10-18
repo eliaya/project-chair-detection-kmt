@@ -412,5 +412,58 @@ class TestDashboardServer(unittest.TestCase):
         srv.stop()
 
 
+class TestDrawZones(unittest.TestCase):
+    def draw_two_tables(self):
+        from draw_zones import ZoneDrawer, handle_key
+        d = ZoneDrawer(prefix="B")
+        for x in (0, 100):                      # table 0: two seats
+            for px, py in ((x, 0), (x + 90, 0), (x + 90, 90)):
+                d.click(px, py)
+            handle_key(d, 13)                   # Enter
+        handle_key(d, ord("t"))
+        for px, py in ((300, 0), (390, 0), (390, 90), (300, 90)):
+            d.click(px + 0.4, py)               # stored as camera pixels (ints)
+        return d, handle_key(d, ord("s"))       # s closes the open seat and saves
+
+    def test_tables_seats_and_names(self):
+        d, action = self.draw_two_tables()
+        self.assertEqual(action, "save")
+        seats = d.seats()
+        self.assertEqual([[x["name"] for x in t] for t in seats], [["B01", "B02"], ["B03"]])
+        self.assertEqual(seats[1][0]["vertices"], [[300, 0], [390, 0], [390, 90], [300, 90]])
+
+    def test_needs_three_points_and_undo(self):
+        from draw_zones import ZoneDrawer, handle_key
+        d = ZoneDrawer()
+        d.click(0, 0); d.click(10, 0)
+        handle_key(d, 13)
+        self.assertEqual(d.seats(), [])         # 2 points: not a seat
+        d.click(10, 10); handle_key(d, 13)
+        handle_key(d, ord("u"))                 # removes the seat
+        self.assertEqual((d.seats(), d.points), ([], []))
+        self.assertEqual(handle_key(d, 27), "quit")
+
+    def test_output_works_in_main(self):
+        """What draw_zones writes is what OccupancyTracker reads."""
+        from main import OccupancyTracker
+        d, _ = self.draw_two_tables()
+        zone = {"id": "zB", "camera": "cam1", "seats": d.seats()}
+        t = OccupancyTracker([zone])
+        r = t.process_frame([(0, seat_box([[300, 0], [390, 0], [390, 90], [300, 90]]))], zone)
+        self.assertEqual(r["zB_t01_s00"]["status"], "confirming")
+
+    def test_render(self):
+        try:
+            import numpy as np
+        except ImportError:
+            self.skipTest("numpy / OpenCV not installed")
+        from draw_zones import render
+        d, _ = self.draw_two_tables()
+        img = np.zeros((1080, 1920, 3), np.uint8)
+        out = render(img, d, 0.5)
+        self.assertEqual(out.shape, (540, 960, 3))
+        self.assertGreater(out.sum(), 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
