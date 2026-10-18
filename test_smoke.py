@@ -284,18 +284,41 @@ class TestCloudSync(unittest.TestCase):
 
 
 class TestCamera(unittest.TestCase):
-    """Camera mock frame generation."""
-
-    def test_read_frame(self):
+    def test_mock_frame(self):
         from main import Camera
         cam = Camera(width=10, height=10)
-        frame = cam.read_frame()
-        self.assertIsNotNone(frame)
+        self.assertIsNotNone(cam.read_frame())
+        cam.release()
 
-    def test_release(self):
+    def test_missing_camera_gives_no_frame(self):
+        from main import Camera
+        cam = Camera(device="/dev/video97")
+        self.assertEqual(cam.status, "open_failed")
+        self.assertIsNone(cam.read_frame())
+        cam.release()
+
+    def test_read_failure_and_reopen(self):
         from main import Camera
         cam = Camera()
-        cam.release()  # Should not raise
+        cam.device = "/dev/video97"
+
+        class Cap:
+            def read(self):
+                return False, None
+
+            def release(self):
+                pass
+
+        cam._cap = Cap()
+        self.assertIsNone(cam.read_frame())
+        self.assertEqual(cam.status, "read_failed")
+        opened = []
+        cam._open = lambda: opened.append(1)
+        self.assertIsNone(cam.read_frame())       # waits REOPEN_S before retrying
+        self.assertEqual(opened, [])
+        cam._next_open = 0
+        cam.read_frame()
+        self.assertEqual(opened, [1])
 
 
 class TestConfigLoad(unittest.TestCase):
@@ -387,6 +410,28 @@ class TestRun(unittest.TestCase):
             CloudSync(api_url="", device_id="t", queue_path=":memory:"),
             duration_s=0.2, interval_s=0.05)
         self.assertEqual(tracker.states["z1_t00_s00"].status, "empty")
+
+    def test_failed_camera_is_not_judged_and_is_reported(self):
+        from main import run, OccupancyTracker, CloudSync, VERSION
+
+        class DeadCam:
+            status = "open_failed"
+
+            def read_frame(self):
+                return None
+
+        tracker = OccupancyTracker([ZONE])
+        tracker.ensure_seats()
+        cloud = CloudSync(api_url="http://x/api/occupancy", device_id="t", queue_path=":memory:")
+        sent = []
+        cloud._send = lambda p: sent.append(p) or True
+        called = []
+        run([("cam1", DeadCam())], [ZONE], lambda f: called.append(f) or [], tracker, cloud,
+            duration_s=0.1, interval_s=0.05)
+        self.assertEqual(called, [])                         # detector never sees a fake frame
+        self.assertEqual(sent[0]["health"]["cameras"], {"cam1": "open_failed"})
+        self.assertEqual(sent[0]["health"]["version"], VERSION)
+        self.assertEqual(sent[0]["occupancy"], {})          # first heartbeat goes out at once
 
     def test_mock_detector_sits_on_configured_seats(self):
         from main import MockDetector, OccupancyTracker

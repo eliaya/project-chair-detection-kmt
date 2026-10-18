@@ -15,43 +15,73 @@ from datetime import datetime, timezone
 
 from utils import load_config, point_in_polygon, bbox_bottom_center
 
+VERSION = "1.1"
+
 
 # ---------------------------------------------------------------------------
 # Camera (USB webcam capture, mock fallback)
 # ---------------------------------------------------------------------------
 
 class Camera:
-    """USB webcam capture (device "/dev/videoN"). device=None, or a camera that
-    cannot be opened, gives a gradient frame instead."""
+    """USB webcam capture (device "/dev/videoN"). status is "ok", "open_failed" or
+    "read_failed"; a failed camera returns None, so its seats are not judged on a fake
+    frame, and is reopened every REOPEN_S seconds. device=None gives a gradient frame (mock)."""
+
+    REOPEN_S = 10
 
     def __init__(self, device=None, width=1920, height=1080):
         self.device = device
         self.width = width
         self.height = height
+        self.status = "ok"
         self._frame_idx = 0
-        self._has_cam = False
-        if device is None:
-            return
+        self._cap = None
+        self._next_open = 0.0
+        if device is not None:
+            self._open()
+
+    def _open(self):
+        self._next_open = time.time() + self.REOPEN_S
         try:
             import cv2
-            self._cap = cv2.VideoCapture(int(str(device).replace("/dev/video", "")))
-            if self._cap.isOpened():
-                # 1080p over USB 2.0 needs MJPEG; YUYV tops out at a few fps.
-                self._cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-                self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-                self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-                self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # read the latest frame, not a queued one
-                self._has_cam = True
-            else:
-                print(f"  [camera] {device} を開けません → グラデーション画像")
         except ImportError:
-            pass
+            self.status = "open_failed"
+            print("  [camera] OpenCV がありません (pip install opencv-python-headless)")
+            return
+        if self._cap is not None:
+            self._cap.release()
+        self._cap = cv2.VideoCapture(int(str(self.device).replace("/dev/video", "")))
+        if not self._cap.isOpened():
+            self.status = "open_failed"
+            print(f"  [camera] {self.device} を開けません（{self.REOPEN_S}秒後に再試行）")
+            return
+        # 1080p over USB 2.0 needs MJPEG; YUYV tops out at a few fps.
+        self._cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+        self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+        self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # read the latest frame, not a queued one
+        if self.status != "ok":
+            print(f"  [camera] {self.device} 復旧")
+        self.status = "ok"
 
     def read_frame(self):
-        if self._has_cam:
-            ok, frame = self._cap.read()
-            if ok:
-                return frame
+        if self.device is None:
+            return self._gradient()
+        if self.status != "ok":
+            if time.time() < self._next_open:
+                return None
+            self._open()
+            if self.status != "ok":
+                return None
+        ok, frame = self._cap.read()
+        if not ok:
+            self.status = "read_failed"
+            self._next_open = time.time() + self.REOPEN_S
+            print(f"  [camera] {self.device} から画像を取得できません（{self.REOPEN_S}秒後に再試行）")
+            return None
+        return frame
+
+    def _gradient(self):
         # Mock: horizontal gradient frame
         t = time.time() + self._frame_idx * 0.1
         row = []
@@ -64,12 +94,12 @@ class Camera:
         return row
 
     def release(self):
-        if hasattr(self, "_cap"):
+        if self._cap is not None:
             self._cap.release()
 
 
 # ---------------------------------------------------------------------------
-# Detection (YOLOv8n placeholder)
+# Detection (YOLO26n on NCNN)
 # ---------------------------------------------------------------------------
 
 class Detector:
@@ -341,7 +371,7 @@ class CloudSync:
         self._db.execute("CREATE TABLE IF NOT EXISTS outbox (id INTEGER PRIMARY KEY, payload TEXT NOT NULL)")
         self._db.commit()
         self._online = True
-        self._last_heartbeat = time.time()
+        self._last_heartbeat = 0.0   # first heartbeat at once: the admin UI shows "connected"
         self._last = {}   # seat_id -> latest result, re-sent by heartbeat
 
     def _payload(self, occupancy):
@@ -378,15 +408,19 @@ class CloudSync:
             self._db.commit()
         return True
 
-    def heartbeat(self):
+    def heartbeat(self, health=None):
+        """Every 30 s: flush the outbox, then send all seats plus the Pi's health."""
         now = time.time()
         if now - self._last_heartbeat < 30 or not self.api_url:
             return
         self._last_heartbeat = now
         print(f"  [heartbeat] {self.device_id} (未送信 {self.queued()} 件)")
         # Full snapshot: keeps the device "online" (90 s rule) and repairs lost updates.
-        if self._flush() and self._last:
-            self._online = self._send(self._payload(dict(self._last)))
+        if self._flush():
+            payload = self._payload(dict(self._last))
+            if health:
+                payload["health"] = health
+            self._online = self._send(payload)
 
     def _send(self, payload):
         req = urllib.request.Request(
@@ -491,15 +525,28 @@ def run(cams, zones, detector, tracker, cloud, duration_s=None, interval_s=1.0,
     zones_of = {cid: [z for z in zones if z.get("camera") == cid] for cid, _ in cams}
     start = time.time()
     frames = 0
+    infer_ms = 0.0
     while duration_s is None or time.time() - start < duration_s:
         t0 = time.time()
         for cid, cam in cams:
+            frame = cam.read_frame()
+            if frame is None:
+                # No fake frame: the Worker shows this camera's seats as unknown.
+                continue
+            t1 = time.time()
+            dets = detector(frame)
+            infer_ms = (time.time() - t1) * 1000
             bt = trackers[cid]
-            tracks = [(tid, box) for tid, box in bt.update(detector(cam.read_frame()))
+            tracks = [(tid, box) for tid, box in bt.update(dets)
                       if not is_staff(box, bt.speed[tid], staff_aspect, staff_speed)]
             for z in zones_of[cid]:
                 cloud.submit(tracker.process_frame(tracks, z))
-        cloud.heartbeat()
+        cloud.heartbeat(health={
+            "version": VERSION,
+            "queue": cloud.queued(),
+            "infer_ms": round(infer_ms),
+            "cameras": {cid: cam.status for cid, cam in cams},
+        })
         frames += len(cams)
         if frames % 10 == 0:
             print(f"  {frames} frames processed")
@@ -520,7 +567,7 @@ def main(argv=None):
     args = p.parse_args(argv)
 
     print("=" * 50)
-    print(" テーブル稼働監視システム v1.0")
+    print(f" テーブル稼働監視システム v{VERSION}")
     print("=" * 50)
 
     config = load_config(args.config)
@@ -541,8 +588,8 @@ def main(argv=None):
 
     cam_cfgs = config.get("cameras", [])
     if not cam_cfgs:
-        print("カメラなし。設定にカメラを登録してください。")
-        return
+        # Keep sending heartbeats so the admin UI shows the Pi as connected.
+        print("カメラなし。管理画面でカメラを登録し、main.py を再起動してください。")
     if args.mock:
         cams = [(c["id"], Camera(width=640, height=480)) for c in cam_cfgs]
         detector = MockDetector(zones)
