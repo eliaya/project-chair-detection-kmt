@@ -51,18 +51,46 @@ npx wrangler secret put SETUP_TOKEN         # 最初の管理者の作成に使�
 
 ## Raspberry Pi 側
 
-1. 「デバイス」画面（またはダッシュボードの「デバイスを登録」）でデバイスを登録し、表示された API トークンを
-   控えます（再表示できません。紛失時は「デバイス」画面で「トークン再発行」）。
-2. 続けてカメラ・ゾーンを登録します（既存の `config.json` の値をそのまま貼れます）。
-3. Pi で起動します。
+リポジトリ直下のファイルを使います（`main.py`、`draw_zones.py`、`scripts/`、`deploy/`）。
 
-```sh
-export API_TOKEN=<トークン>
-python3 main.py --config https://<worker のドメイン>/api/config
-```
+1. **開発PC**: 人物検出モデル（YOLO26n）を NCNN 形式に変換します（PyTorch を使うため Pi では行いません）。
 
-設定は起動時に取得し、失敗した場合はローカルの `config.json` を使います。送信先は `/api/config` の
-`cloud.api_url` で自動設定されます。設定変更は `main.py` の再起動後に反映されます。
+   ```sh
+   ./scripts/export_model.sh          # → models/yolo26n_ncnn_model/
+   ```
+
+2. **Pi**（Raspberry Pi OS Lite）: リポジトリを取得してセットアップし、開発PCからモデルをコピーします。
+   リポジトリは private なので、Pi の公開鍵（`ssh-keygen -t ed25519` で作成）を GitHub の
+   Settings → Deploy keys に読み取り専用で登録しておきます。
+
+   ```sh
+   git clone git@github.com:eliottom/project-chair-detection.git && cd project-chair-detection
+   ./scripts/install_pi.sh            # venv・依存パッケージ・systemd（自動起動・自動再起動）・NTP
+   # 開発PCで: scp -r models <user>@<pi>:~/project-chair-detection/
+   ```
+
+3. 管理画面の「デバイス」で Pi を登録し、表示された API トークンを控えます（再表示できません。紛失時は
+   「トークン再発行」）。続けて「カメラ」を登録します。
+4. **座席を描く**: Pi でカメラ画像を保存し、開発PCで座席ごとに多角形を描きます。
+
+   ```sh
+   # Pi
+   .venv/bin/python draw_zones.py --snapshot cam1.jpg --device /dev/video0
+   # 開発PC（opencv-python が必要）
+   scp <user>@<pi>:~/project-chair-detection/cam1.jpg . && python3 draw_zones.py --image cam1.jpg --prefix A
+   ```
+
+   クリックで頂点、Enter で座席を確定、`t` で次の卓、`s` で保存します。出力の `seats` を「ゾーン」の
+   「卓と座席」に貼り付けます。座席は人物枠の下 1/3 の中心点が入る範囲（座面〜足元）を囲みます。
+
+5. **起動**: `/etc/kmt-occupancy.env` に `API_TOKEN` と `CONFIG_URL=https://<worker のドメイン>/api/config` を書き、
+   `sudo systemctl restart kmt-occupancy`（ログ: `journalctl -u kmt-occupancy -f`）。
+
+設定は起動時に取得してキャッシュし（`config.cache.json`）、取得できないときはキャッシュ、なければ `config.json`
+を使います。送信できなかった状態変化は `queue.db` に保存し、復旧後に古い順に再送します。設定変更は
+`sudo systemctl restart kmt-occupancy` で反映されます。更新は `git pull` 後に同じく再起動します。
+
+カメラなしの動作確認: `python3 main.py --mock --duration 60`（http://localhost:8080 に座席の状態を表示）。
 
 ## 無料枠について
 
