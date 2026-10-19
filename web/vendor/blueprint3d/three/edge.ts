@@ -14,8 +14,6 @@ export class Edge {
   private basePlanes: THREE.Mesh[] = [] // always visible
   private texture: THREE.Texture | null = null
   private currentTextureUrl: string = ''
-  private readonly textureLoader = new THREE.TextureLoader()
-  private readonly lightMap: THREE.Texture
   // Brightened colors for Three.js r181
   private readonly fillerColor = 0xffffff
   private readonly sideColor = 0xeeeeee
@@ -34,8 +32,7 @@ export class Edge {
     this.renderer = renderer
     this.wall = edge.wall
     this.front = edge.front
-    this.lightMap = this.textureLoader.load('https://cdn-images.lumenfeng.com/models-cover/walllightmap.png')
-    this.lightMap.colorSpace = THREE.SRGBColorSpace
+    // KMT: removed an unused light map that was fetched from a third-party CDN.
 
     // Bind functions once and store references
     this.boundRedraw = this.redraw.bind(this)

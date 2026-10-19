@@ -134,7 +134,15 @@ export class Controls {
     this.domElement.addEventListener('touchend', this.touchend.bind(this) as EventListener, false)
     this.domElement.addEventListener('touchmove', this.touchmove.bind(this) as EventListener, false)
 
-    window.addEventListener('keydown', this.onKeyDown.bind(this), false)
+    window.addEventListener('keydown', this.onKeyDownBound, false)
+  }
+
+  // KMT: kept so dispose() can remove the window listener.
+  private readonly onKeyDownBound = (event: KeyboardEvent) => this.onKeyDown(event)
+
+  /** KMT: removes the window listener (the element listeners go with the element). */
+  public dispose(): void {
+    window.removeEventListener('keydown', this.onKeyDownBound, false)
   }
 
   public controlsActive(): boolean {

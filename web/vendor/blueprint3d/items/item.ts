@@ -255,7 +255,7 @@ export abstract class Item extends THREE.Mesh {
   }
 
   /** */
-  public moveToPosition(vec3: THREE.Vector3, intersection: THREE.Intersection | null): void {
+  public moveToPosition(vec3: THREE.Vector3, _intersection: THREE.Intersection | null): void {
     this.position.copy(vec3)
   }
 
@@ -282,8 +282,8 @@ export abstract class Item extends THREE.Mesh {
    * TODO: handle rotated objects better!
    */
   public getCorners(
-    xDim: string,
-    yDim: string,
+    _xDim: string,
+    _yDim: string,
     position?: THREE.Vector3
   ): { x: number; y: number }[] {
     position = position || this.position

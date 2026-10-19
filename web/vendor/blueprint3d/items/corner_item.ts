@@ -46,7 +46,7 @@ export class CornerItem extends FloorItem {
   }
 
   /** Move to position, ensuring it's at a valid corner */
-  public moveToPosition(vec3: THREE.Vector3, intersection: THREE.Intersection | null): void {
+  public moveToPosition(vec3: THREE.Vector3, _intersection: THREE.Intersection | null): void {
     // Find nearest valid corner
     const nearestCorner = this.findNearestValidCorner(vec3)
 

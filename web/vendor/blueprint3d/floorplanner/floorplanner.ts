@@ -93,6 +93,19 @@ export class Floorplanner {
     }
   }
 
+  // KMT: kept so destroy() can remove the document listener.
+  private readonly onKeyUp = (e: KeyboardEvent) => {
+    if (e.keyCode == 27) {
+      this.escapeKey()
+    }
+  }
+
+  /** KMT: removes the document and window listeners (call when the view unmounts). */
+  public destroy(): void {
+    document.removeEventListener('keyup', this.onKeyUp)
+    this.view.destroy()
+  }
+
   /** */
   constructor(
     canvas: string,
@@ -126,11 +139,7 @@ export class Floorplanner {
       this.mouseleave()
     })
 
-    document.addEventListener('keyup', (e: KeyboardEvent) => {
-      if (e.keyCode == 27) {
-        this.escapeKey()
-      }
-    })
+    document.addEventListener('keyup', this.onKeyUp)
 
     floorplan.roomLoadedCallbacks.add(() => {
       this.reset()

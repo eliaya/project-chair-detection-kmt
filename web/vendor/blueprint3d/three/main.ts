@@ -49,6 +49,9 @@ export class Main {
   private floorplan!: FloorplanThree
   private _needsUpdate = false
   private lastRender = Date.now()
+  // KMT: kept so dispose() can stop the loop and remove the listener.
+  private frameId = 0
+  private readonly onResize = () => this.updateWindowSize()
   private mouseOver = false
   private hasClicked = false
   private hud!: HUD
@@ -60,7 +63,7 @@ export class Main {
   constructor(
     model: Model,
     element: HTMLElement | string,
-    canvasElement?: HTMLElement,
+    _canvasElement?: HTMLElement,
     opts?: MainOptions
   ) {
     this.model = model
@@ -89,13 +92,15 @@ export class Main {
   private init(): void {
     this.domElement = this.element // Container
     this.camera = new THREE.PerspectiveCamera(45, 1, 1, 10000)
+    // KMT: tuned for old integrated GPUs: no MSAA, no shadow maps, no preserved
+    // drawing buffer (dataUrl() is not used), and at most 1.5x device pixels.
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      preserveDrawingBuffer: true // required to support .toDataURL()
+      antialias: false,
+      powerPreference: 'low-power'
     })
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
     this.renderer.autoClear = false
-    this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFShadowMap // Optimized: PCFShadowMap is faster than PCFSoftShadowMap
+    this.renderer.shadowMap.enabled = false
     // Fix color space for proper color saturation (matching legacy behavior)
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
 
@@ -122,7 +127,7 @@ export class Main {
     // handle window resizing
     this.updateWindowSize()
     if (this.options.resize) {
-      window.addEventListener('resize', this.updateWindowSize.bind(this))
+      window.addEventListener('resize', this.onResize)
     }
 
     // setup camera nicely
@@ -307,8 +312,18 @@ export class Main {
   }
 
   private animate(): void {
-    requestAnimationFrame(this.animate.bind(this))
+    this.frameId = requestAnimationFrame(this.animate.bind(this))
     this.render()
+  }
+
+  /** KMT: stops rendering and frees the WebGL context (call when the view unmounts). */
+  public dispose(): void {
+    cancelAnimationFrame(this.frameId)
+    window.removeEventListener('resize', this.onResize)
+    this.controls.dispose()
+    this.renderer.dispose()
+    this.renderer.forceContextLoss()
+    this.renderer.domElement.remove()
   }
 
   public setCursorStyle(cursorStyle: string): void {

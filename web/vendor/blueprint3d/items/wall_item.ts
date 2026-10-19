@@ -258,7 +258,7 @@ export abstract class WallItem extends Item {
   }
 
   /** Wall items are always in a valid position when attached to a wall */
-  public isValidPosition(vec3: THREE.Vector3): boolean {
+  public isValidPosition(_vec3: THREE.Vector3): boolean {
     return true
   }
 }

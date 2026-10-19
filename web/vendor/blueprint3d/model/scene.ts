@@ -35,6 +35,12 @@ export class Scene {
   /** Item */
   public itemRemovedCallbacks = new EventEmitter<Item>()
 
+  /** KMT: builds the mesh for model URLs that start with "proc:" (no download). */
+  public static procedural?: (name: string) => {
+    geometry: THREE.BufferGeometry
+    materials: THREE.Material[]
+  }
+
   /** Item Load Error */
   public itemLoadErrorCallbacks = new EventEmitter<{ fileName: string; error: any }>()
 
@@ -169,6 +175,12 @@ export class Scene {
     }
 
     this.itemLoadingCallbacks.fire()
+
+    if (fileName.startsWith('proc:') && Scene.procedural) {
+      const { geometry, materials } = Scene.procedural(fileName.slice(5))
+      loaderCallback(geometry, materials)
+      return
+    }
 
     // Determine which loader to use based on file extension
     const isGLB = fileName.toLowerCase().endsWith('.glb') || fileName.toLowerCase().endsWith('.gltf')

@@ -1,5 +1,3 @@
-import { dimInch } from './dimensioning'
-
 // GENERAL:
 
 /** The dimensioning unit for 2D floorplan measurements. */
@@ -22,7 +20,8 @@ export const configSnapToWallDistance = 'snapToWallDistance'
 export class Configuration {
   /** Configuration data loaded from/stored to extern. */
   private static data: { [key: string]: any } = {
-    dimUnit: dimInch,
+    // KMT: centimetres, written as a literal to break the import cycle with dimensioning.ts.
+    dimUnit: 'cm',
 
     wallHeight: 250,
     wallThickness: 10,

@@ -7,7 +7,8 @@ import type { HalfEdge } from './half_edge'
 
 /** The default wall texture. */
 const defaultWallTexture = {
-  url: 'https://cdn-images.lumenfeng.com/models-cover/wallmap.png',
+  // KMT: plain colour instead of a third-party CDN image.
+  url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4+vULAAXBAt8dyuDaAAAAAElFTkSuQmCC',
   stretch: true,
   scale: 0
 }

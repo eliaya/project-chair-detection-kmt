@@ -15,7 +15,7 @@ export class JSONLoader {
   load(
     url: string,
     onLoad: (geometry: THREE.BufferGeometry, materials: THREE.Material[]) => void,
-    onProgress?: (event: ProgressEvent) => void,
+    _onProgress?: (event: ProgressEvent) => void,
     onError?: (event: ErrorEvent) => void
   ) {
     this.manager.itemStart(url)

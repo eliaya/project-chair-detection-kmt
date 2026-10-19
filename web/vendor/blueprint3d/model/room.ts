@@ -14,7 +14,8 @@ var Polygon = require('polygon')
 
 /** Default texture to be used if nothing is provided. */
 const defaultRoomTexture = {
-  url: 'https://cdn-images.lumenfeng.com/models-cover/hardwood.png',
+  // KMT: plain colour instead of a third-party CDN image.
+  url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGO4dv4IAAToAmp3dAgVAAAAAElFTkSuQmCC',
   scale: 400
 }
 
