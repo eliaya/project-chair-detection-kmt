@@ -1,21 +1,28 @@
 #!/usr/bin/env bash
 # Local dev for web/: Vite + Worker + local D1 on one port.
 #
-#   ./dev.sh [--reset] [<worktree-path> <port>]
+#   ./dev.sh [--reset] [--seed] [<worktree-path> <port>]
 #
 #   --reset  delete all local data (web/.wrangler/state, web/.dev.vars) and start from a clean
 #            environment; the app then opens the setup wizard.
-#   Sample data (site name, device, camera, zones, floor plan) is added while the local D1 has
-#   none of them (web/scripts/seed.ts).
+#   --seed   add sample data (site name, device, camera, zones, floor plan) unless the local D1
+#            already has a device, camera, zone or floor plan (web/scripts/seed.ts).
 #   Defaults: this repo, port 5173. --host also serves the LAN, so a Pi can reach /api/*.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-RESET=0
-if [ "${1:-}" = --reset ]; then RESET=1; shift; fi
+RESET=0; SEED=0
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --reset) RESET=1;;
+    --seed) SEED=1;;
+    *) break;;
+  esac
+  shift
+done
 if [ "$#" -ne 0 ] && [ "$#" -ne 2 ]; then
-  echo "Usage: $0 [--reset] [<worktree-path> <port>]" >&2
+  echo "Usage: $0 [--reset] [--seed] [<worktree-path> <port>]" >&2
   exit 1
 fi
 WORKTREE="${1:-$SCRIPT_DIR}"; PORT="${2:-5173}"
@@ -50,7 +57,7 @@ fi
 
 # Applies only pending migrations; CI skips wrangler's confirmation prompt.
 CI=true npm run db:migrate:local
-npm run --silent seed
+if [ "$SEED" = 1 ]; then npm run --silent seed; fi
 
 echo "[dev] $WEB → http://localhost:${PORT}  (Setup code: SETUP_TOKEN in web/.dev.vars)"
 exec npm run dev -- --port "$PORT" --strictPort --host
