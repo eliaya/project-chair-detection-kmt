@@ -4,6 +4,7 @@ import {
   adminUpdateSchema,
   cameraSchema,
   deviceSchema,
+  floorplanSchema,
   idsSchema,
   loginSchema,
   occupancyPayloadSchema,
@@ -414,6 +415,25 @@ async function siteName(req: Request, env: Env) {
   throw new HttpError(404, 'Not Found')
 }
 
+async function floorplan(req: Request, env: Env) {
+  if (req.method === 'GET') {
+    const v = await env.DB.prepare(
+      "SELECT value FROM settings WHERE key = 'floorplan'"
+    ).first<string>('value')
+    return json(v ? JSON.parse(v) : null)
+  }
+  if (req.method === 'PUT') {
+    const d = await body(req, floorplanSchema)
+    await env.DB.prepare(
+      "INSERT INTO settings (key, value) VALUES ('floorplan', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value"
+    )
+      .bind(JSON.stringify(d))
+      .run()
+    return json(d)
+  }
+  throw new HttpError(404, 'Not Found')
+}
+
 async function occupancy(req: Request, env: Env, url: URL, sub?: string) {
   if (sub === 'current' && req.method === 'GET') {
     const [seats, cams] = await env.DB.batch<Record<string, string>>([
@@ -554,6 +574,8 @@ async function route(req: Request, env: Env) {
     return thresholds(req, env)
   if (res === 'settings' && id === 'site_name' && !action)
     return siteName(req, env)
+  if (res === 'settings' && id === 'floorplan' && !action)
+    return floorplan(req, env)
   if (res === 'occupancy' && !action) return occupancy(req, env, url, id)
   throw new HttpError(404, 'Not Found')
 }

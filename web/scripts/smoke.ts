@@ -133,6 +133,23 @@ assert.equal((await call('PUT', '/api/settings/site_name', { site_name: ' ' })).
 if (site_name) assert.deepEqual((await call('PUT', '/api/settings/site_name', { site_name })).data, { site_name })
 step('site name read / validate / write')
 
+// Outside URLs are rejected and textures dropped. The round trip runs only when a
+// plan exists, so it can be written back and a database without one stays untouched.
+const plan = (await call('GET', '/api/settings/floorplan')).data
+const item = { item_name: 't', item_type: 1, xpos: 0, ypos: 36, zpos: 0, rotation: 0, scale_x: 1, scale_y: 1, scale_z: 1, fixed: false }
+const probe = {
+  floorplan: { corners: { a: { x: 0, y: 0 }, b: { x: 100, y: 0 } }, walls: [{ corner1: 'a', corner2: 'b', frontTexture: { url: 'https://x' } }] },
+  items: [{ ...item, model_url: 'proc:table2' }],
+}
+assert.equal((await call('PUT', '/api/settings/floorplan', { ...probe, items: [{ ...item, model_url: 'https://x/a.glb' }] })).status, 400)
+if (plan) {
+  const saved = await call('PUT', '/api/settings/floorplan', probe)
+  assert.equal(saved.status, 200)
+  assert.deepEqual(saved.data.floorplan.walls, [{ corner1: 'a', corner2: 'b' }])
+  assert.equal((await call('PUT', '/api/settings/floorplan', plan)).status, 200)
+}
+step(`floor plan validate${plan ? ' / write' : ' (no plan saved yet: write skipped)'}`)
+
 const a = await call('POST', '/api/admins', { email: 'smoke@example.com', name: 'S', password: 'smoke-pass-123' })
 assert.equal(a.status, 201)
 assert.ok(!('password_hash' in a.data))

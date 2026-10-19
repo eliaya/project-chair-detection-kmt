@@ -75,7 +75,39 @@ export const thresholdsSchema = z.object({
   staff_speed_px: z.number().min(0).max(10000),
 })
 
-const cameraHealthStatuses = ['ok', 'open_failed', 'read_failed'] as const
+// Restaurant floor plan in the blueprint3d serialized form (lengths in cm).
+// Textures are not kept and items must be built-in shapes, so a stored plan
+// never makes a browser fetch an outside URL.
+const cm = z.number().finite().min(-100_000).max(100_000)
+const uuid = z.string().max(64)
+export const floorplanSchema = z.object({
+  floorplan: z.object({
+    corners: z
+      .record(uuid, z.object({ x: cm, y: cm }))
+      .refine((c) => Object.keys(c).length <= 500),
+    walls: z.array(z.object({ corner1: uuid, corner2: uuid })).max(500),
+  }),
+  items: z
+    .array(
+      z.object({
+        item_name: z.string().max(100),
+        item_type: z.number().int().min(0).max(9),
+        model_url: z.string().regex(/^proc:[a-z0-9]{1,32}$/),
+        xpos: cm,
+        ypos: cm,
+        zpos: cm,
+        rotation: z.number().finite(),
+        scale_x: z.number().finite().min(0.01).max(100),
+        scale_y: z.number().finite().min(0.01).max(100),
+        scale_z: z.number().finite().min(0.01).max(100),
+        fixed: z.boolean(),
+        resizable: z.boolean().optional(),
+      })
+    )
+    .max(1000),
+})
+
+const cameraHealthStatuses =['ok', 'open_failed', 'read_failed'] as const
 
 // Sent by main.py with each heartbeat.
 const healthSchema = z
