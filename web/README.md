@@ -31,6 +31,12 @@ SMOKE_EMAIL=you@example.com SMOKE_PASSWORD=... npm run smoke
 # 任意: SMOKE_SETUP_CODE=<SETUP_TOKEN> で「初期化後は /api/setup が閉じている」ことも確認
 ```
 
+平面図のお試しデータ（約 100 席の店をランダムに作り、ローカル D1 に保存。保存済みの平面図は `-- --force` のときだけ置き換え）:
+
+```sh
+npm run seed:floorplan
+```
+
 ## デプロイ
 
 ```sh
