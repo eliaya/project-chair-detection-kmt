@@ -43,8 +43,10 @@ class HttpError extends Error {
 const json = (data: unknown, status = 200, headers?: HeadersInit) =>
   Response.json(data, { status, headers })
 
+// Not Secure in `vite dev` only: browsers drop Secure cookies on plain http other than
+// localhost, so login from a LAN address (dev.sh --host) would otherwise never stick.
 const sessionCookie = (value: string, maxAge: number) =>
-  `session=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`
+  `session=${value}; Path=/; HttpOnly;${import.meta.env.DEV ? '' : ' Secure;'} SameSite=Strict; Max-Age=${maxAge}`
 
 async function body<T extends z.ZodType>(
   req: Request,
