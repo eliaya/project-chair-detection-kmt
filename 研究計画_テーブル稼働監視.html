@@ -5,17 +5,17 @@
 <meta charset="utf-8">
 <title>研究計画 テーブル稼働監視</title>
 <style>
-  @page { size: A4; margin: 11mm 12mm; }
+  @page { size: A4; margin: 9mm 11mm; }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
-         font-size: 8pt; line-height: 1.45; color: #111; }
+         font-size: 7.6pt; line-height: 1.4; color: #111; }
   h1 { font-size: 13.5pt; font-weight: 500; color: #1f4e79; text-align: center; margin: 0; }
   .sub { text-align: center; font-size: 7.6pt; color: #444; margin: 1mm 0 2mm; }
-  h2 { background: #1f4e79; color: #fff; font-size: 10pt; font-weight: 500; margin: 3mm 0 1mm;
+  h2 { background: #1f4e79; color: #fff; font-size: 9.5pt; font-weight: 500; margin: 2.2mm 0 1mm;
        padding: 0.6mm 2mm; break-after: avoid; }
   table { width: 100%; border-collapse: collapse; }
   tr { break-inside: avoid; }
-  th, td { border: 0.6pt solid #9fb3c8; padding: 0.7mm 1.5mm; vertical-align: middle; text-align: left; }
+  th, td { border: 0.6pt solid #9fb3c8; padding: 0.5mm 1.5mm; vertical-align: middle; text-align: left; }
   th, td.label { background: #e3ebf4; font-weight: 400; }
   p { margin: 0.5mm 0; }
   .note { font-size: 7.2pt; color: #333; margin-top: 0.8mm; }
@@ -61,7 +61,7 @@
 </table>
 
 <h2>1. 目的・概要</h2>
-<p>Raspberry Pi と USB Webカメラで構成するエッジ端末上で、軽量物体検出モデル YOLO26n と追跡アルゴリズム ByteTrack を動かし、飲食店の座席ごと・テーブルごとに「空席/着席」「利用時間」「利用人数」「稼働率」をリアルタイムに判定する。判定結果は数値データ(JSON)のみを Cloudflare(Serverless)へ送って管理画面(Web UI)のダッシュボードに表示し、映像はクラウドへ送らず保存もしない。座席・カメラ・端末の設定も管理画面で行い、各端末は起動時にクラウドから設定を取得する。参考事例(Abdul Ahad Raza 氏:YOLO26x+ByteTrack、カメラ1台・6卓、1.5秒滞留で着席判定)に対し、本研究は ①安価なエッジ端末で動かす ②座席形態・配置が不規則な約100席の実店舗規模に複数カメラ・複数エッジで対応する ③複数カメラの判定をクラウド上で統合する、点を新規性とする。開発は Claude Code による Vibe Coding で行う。</p>
+<p>Raspberry Pi と USB Webカメラで構成するエッジ端末上で、軽量物体検出モデル YOLO26n と追跡アルゴリズム ByteTrack を動かし、飲食店の座席ごと・テーブルごとに「空席/着席」「利用時間」「利用人数」「稼働率」をリアルタイムに判定する。判定結果は数値データ(JSON)のみを Cloudflare(Serverless)へ送ってダッシュボードに表示し、映像はクラウドへ送らず保存もしない。参考事例(Abdul Ahad Raza 氏:YOLO26x+ByteTrack、カメラ1台・6卓、1.5秒滞留で着席判定)に対し、本研究は ①安価なエッジ端末で動かす ②座席形態・配置が不規則な約100席の実店舗規模に複数カメラ・複数エッジで対応する ③複数カメラの判定をクラウド上で統合する、点を新規性とする。開発は Claude Code による Vibe Coding で行う。</p>
 
 <h2>2. システム構成と各部品の役割</h2>
 <table>
@@ -69,32 +69,16 @@
   <tr><td>Webカメラ<br>(1080p・広角120°)</td>
       <td>担当座席を固定アングルで撮影する唯一のセンサー。USB(UVC)接続、MJPEG で約1枚/秒を処理。対面席は横方向、カウンターは内側正面から撮る。映像はPiのメモリ上で処理後に破棄。</td></tr>
   <tr><td>Raspberry Pi 5 / 1GB<br>(エッジ端末)</td>
-      <td>カメラ最大4台分の推論・判定・送信を行う。Raspberry Pi OS Lite、systemd で自動起動・自動再起動(初回はインストールスクリプト install_pi.sh で構築)、NTP 時刻同期、NCNN のみで推論(PyTorch 不使用)、アクティブクーラーで冷却。</td></tr>
+      <td>カメラ最大4台分の推論・判定・送信を行う。Raspberry Pi OS Lite、systemd で自動起動・自動再起動、NTP 時刻同期、NCNN のみで推論(PyTorch 不使用)、アクティブクーラーで冷却。</td></tr>
   <tr><td>主プログラム<br>(Python・Pi上)</td>
-      <td>① 映像取得 → ② 人物検出(YOLO26n/NCNN、入力640px) → ③ 追跡(ByteTrack) → ④ 座席区域判定(人物枠の下1/3中央点が座席多角形に入るか) → ⑤ 着席判定(3回連続≒3秒で着席、離席は10秒猶予。縦長の枠(立位)・高速移動は店員として除外) → ⑥ 送信(状態変化時に即時、30秒ごとハートビート、失敗時は SQLite に保存して再送)。設定(カメラ・座席・閾値)は起動時にクラウドから取得し、通信できないときは前回の保存分で動く。カメラが開けない・映像が取れないときはその席を判定せず10秒ごとに再接続し、カメラ状態・推論時間・未送信件数をハートビートで報告する。補助ツール:カメラ画像の上で座席区域を描く draw_zones.py、平面図からカメラ配置を計算する plan_coverage.py(予定)。</td></tr>
+      <td>① 映像取得 → ② 人物検出(YOLO26n/NCNN、入力640px) → ③ 追跡(ByteTrack) → ④ 座席区域判定(人物枠の下1/3中央点が座席多角形に入るか) → ⑤ 着席判定(3回連続≒3秒で着席、離席は10秒猶予。立位・高速移動は店員として除外) → ⑥ 送信(状態変化時に即時、30秒ごとハートビート、失敗時は SQLite に保存して再送)。設定は起動時にクラウドから取得、カメラ故障時はその席を判定せず再接続。補助ツール:座席区域を描く draw_zones.py、平面図からカメラ配置を計算する plan_coverage.py(予定)。</td></tr>
   <tr><td>Cloudflare<br>(Serverless)</td>
-      <td>Workers:1つの Worker で受信API(端末ごとのAPIトークン認証)・管理API(ログイン認証)・管理画面の配信を行う／D1:座席の状態と状態変化の履歴、ゾーン・カメラ・端末・閾値の設定、管理者／Durable Objects:店舗ごとに複数カメラの観測を統合(主カメラ優先、隠れ・故障時は予備カメラ)し WebSocket で即時配信(段階2で実装予定)。無料枠内で0円/月。</td></tr>
-  <tr><td>管理画面<br>(Web UI)</td>
-      <td>ブラウザで使う管理画面(React・shadcn-admin)。ダッシュボード(卓ごとの空き/利用中)と、座席・カメラ・端末の設定を1か所で行う。日本語・英語・繁体字中国語・簡体字中国語を画面上部で切り替え。各画面は「3. 管理画面(Web UI)」参照。</td></tr>
+      <td>Workers:受信API(APIトークン認証)とダッシュボードの配信／D1:座席・卓の状態と利用履歴、設定／Durable Objects:店舗ごとに複数カメラの観測を統合(主カメラ優先、隠れ・故障時は予備カメラ)し WebSocket で即時配信(段階2で実装予定)。無料枠内で0円/月。</td></tr>
   <tr><td>開発PC + Claude Code</td>
-      <td>全ソースコードを Vibe Coding で作成。開発PC → GitHub → 各Pi(git pull)、Cloudflare へは wrangler deploy。開発PC上では dev.sh で Worker・D1・管理画面をまとめて起動し、模擬データ(main.py --mock)で一連の動作を確認する。</td></tr>
+      <td>全ソースコードを Vibe Coding で作成。開発PC → GitHub → 各Pi(git pull)、Cloudflare へは wrangler deploy。</td></tr>
 </table>
 
-<h2>3. 管理画面(Web UI)</h2>
-<table>
-  <tr><th style="width:17%">画面</th><th>機能</th></tr>
-  <tr><td>初期設定</td><td>初回アクセス時にウィザードで「サイト名(店舗名)」と「最初の管理者」を登録する。デプロイ時に設定した Setup code を知る人だけが実行でき、完了後は無効になる。</td></tr>
-  <tr><td>ログイン・管理者</td><td>複数の管理者がメールアドレスとパスワードでログイン(パスワードはハッシュ化して保存、連続失敗は回数制限)。管理者の追加・変更・削除。</td></tr>
-  <tr><td>ダッシュボード</td><td>ゾーンごとに卓のカードを並べ、空き=緑/利用中=赤/確認中=橙/不明=灰で表示。卓ごとの着席人数(例 2/4)と利用時間、全体の卓数・利用中・稼働率・不明数を5秒ごとに更新。Pi が90秒以上通信しない、またはカメラが故障した席は「不明」とし、原因(例「カメラ cam2: 開けません」)を表示する。</td></tr>
-  <tr><td>履歴</td><td>状態変化の記録(最新500件)を日時・卓・状態で表示し、絞り込み・まとめて削除ができる。</td></tr>
-  <tr><td>ゾーン</td><td>カメラ画像上の座席区域を卓と座席の多角形で登録(draw_zones.py の出力を貼り付け)。</td></tr>
-  <tr><td>カメラ</td><td>各Piに接続したカメラ(デバイスパス・解像度・fps)を登録。状態を「正常/開けません/映像を取得できません/Pi オフライン」で表示。</td></tr>
-  <tr><td>デバイス(Pi)</td><td>Pi を登録すると APIトークンを1回だけ表示し、Pi の設定ファイルに貼る2行をコピーできる。そのまま接続を待ち、Pi から通信が届くと「接続しました」、カメラ異常があればカメラIDと原因を表示。一覧では状態(未接続/起動中/オンライン/オフライン/カメラ異常)と、プログラムのバージョン・推論時間・未送信件数を確認できる。トークンの再発行も可能。</td></tr>
-  <tr><td>閾値・サイト</td><td>検出信頼度・着席確定回数・離席猶予・店員判定(縦横比・移動速度)の変更(Pi 再起動で反映)。サイト名の変更。外観(ライト/ダーク)と表示の設定。</td></tr>
-</table>
-<p class="note">実装状況(2026年10月19日時点):主プログラム・Workers/D1・管理画面は実装済みで、開発PC上で模擬データによる Pi → クラウド → 画面の一連の動作と、カメラ故障時の表示を確認した。Cloudflare への本番デプロイ、実機(Pi・カメラ)での精度評価、複数カメラ統合(Durable Objects)は未実施。</p>
-
-<h2>4. 処理の流れと判定ルール</h2>
+<h2>3. 処理の流れと判定ルール</h2>
 <div class="lane">
   <div class="lane-head">エッジ<small>各Pi・約1秒ごと</small></div>
   <div class="boxes">
@@ -116,7 +100,7 @@
     <div class="box plan">予備カメラで補完<br>隠れ・故障時<br>(段階2)</div><span class="arrow">→</span>
     <div class="box">D1 保存<br>状態・変化履歴</div><span class="arrow">→</span>
     <div class="box">卓の判定<br>1席着席=利用中</div><span class="arrow">→</span>
-    <div class="box">管理画面<br>5秒ごと更新<br>(段階2: WebSocket)</div>
+    <div class="box">ダッシュボード<br>5秒ごと更新</div>
   </div>
 </div>
 
@@ -142,9 +126,9 @@
     <text x="420" y="114">10秒以上不在 → 空席(利用時間を記録)</text>
   </g>
 </svg>
-<p class="note">※ 店員・通行人(人物枠の高さ÷幅が2.0超の立位、または高速移動)は着席候補から除外(管理画面の「閾値」で調整可)。卓は1席でも着席なら「利用中」。ネットワーク断時は Pi 内の SQLite に保存して復旧後に再送し、90秒以上通信のない Pi の担当席とカメラが故障した席は「不明」と表示する。主カメラが他の客に隠れた座席を「隠れ」として送り予備カメラの判定を使う処理、および卓の全席が空いて60秒後に「空き」とする猶予(会計時の一時起立に対応)は段階2で実装する。</p>
+<p class="note">※ 店員・通行人(人物枠の高さ÷幅が2.0超の立位、または高速移動)は着席候補から除外。卓は1席でも着席なら「利用中」。ネットワーク断時は Pi 内の SQLite に保存して復旧後に再送し、90秒以上通信のない Pi の担当席とカメラが故障した席は「不明」と表示する。主カメラが他の客に隠れた座席を「隠れ」として送り予備カメラの判定を使う処理、および卓の全席が空いて60秒後に「空き」とする猶予(会計時の一時起立に対応)は段階2で実装する。</p>
 
-<h2>5. 評価指標と注意点</h2>
+<h2>4. 評価指標と注意点</h2>
 <table>
   <tr><th style="width:27%">評価指標</th><th style="width:20%">目標</th><th>注意点・対策</th></tr>
   <tr><td>座席ごとの空席/着席の正解率</td><td>90%以上(座席タイプ別)</td><td>4人卓の隠れ:横・斜め上から撮影し、主要席は2台で重ねて見る</td></tr>
@@ -154,7 +138,7 @@
   <tr><td>通信量削減(映像送信比)／クラウド費用</td><td>99%以上／0円/月</td><td>撮影は店舗の許可と掲示が必要。顔認証は行わず、映像は保存・送信しない</td></tr>
 </table>
 
-<h2>6. 調達希望物(段階1:検証用 カメラ1台・約12席)</h2>
+<h2>5. 調達希望物(段階1:検証用 カメラ1台・約12席)</h2>
 <table class="urls">
   <tr><th style="width:4%">No.</th><th>品名</th><th style="width:5%;white-space:nowrap">数量</th><th style="width:11%">単価(税込)</th><th style="width:38%">対象物購入サイトのURL</th></tr>
   <tr><td>1</td><td>Raspberry Pi 5 / 1GB</td><td>1</td><td>9,900円</td><td>https://www.switch-science.com/products/10908</td></tr>
@@ -167,9 +151,9 @@
   <tr><td></td><td>合計</td><td></td><td>約59,608円</td><td>クラウド費用:0円/月(送料別)</td></tr>
 </table>
 <div class="alert">【重要】No.1〜6 の物品(Claude Code 以外)は、購入ではなく学校の貸し出し制度による借用でも対応可能です。<br>貸し出しで揃った場合、新たに購入が必要なのは No.7 Claude Code(約3,300円/月)のみとなります。</div>
-<p class="note">※ 展示機:ダッシュボード(管理画面)の常時表示・デモと、Claude Code による開発・Pi へのデプロイに使う。Claude Code は Claude Pro(US$20/月、1ドル=150円・消費税10%で約3,300円)に含まれ、実際の請求額は為替で変動する。Amazon.co.jp の Raspberry Pi 5 は転売価格(1GBキット 17,568円)のため No.1〜3 はスイッチサイエンスを希望。価格は2026年10月16日時点、在庫・UVC対応は要確認。</p>
+<p class="note">※ 展示機:ダッシュボードの常時表示・デモと、Claude Code による開発・Pi へのデプロイに使う。Claude Code は Claude Pro(US$20/月、1ドル=150円・消費税10%で約3,300円)に含まれ、実際の請求額は為替で変動する。Amazon.co.jp の Raspberry Pi 5 は転売価格(1GBキット 17,568円)のため No.1〜3 はスイッチサイエンスを希望。価格は2026年10月16日時点、在庫・UVC対応は要確認。</p>
 
-<h2>7. 段階:12席を超える店舗への拡張計画(約100席まで)</h2>
+<h2>6. 段階:12席を超える店舗への拡張計画(約100席まで)</h2>
 <p>想定店舗:4人卓(2対2対面)10卓=40席、2人卓(1対1対面)20卓=40席、カウンター1人席20席、計100席、配置は不規則(斜め置き・柱・仕切りあり)。カメラ1台で正しく判定できるのは約5.5m以内(着席者が画像上90px以上)・実効約20〜25m²で、4人卓は奥の客が隠れるため横・斜め上から撮る必要がある。これより約12席ごとにカメラ1台(カウンターは約10席/台)、Pi 1台にカメラ最大4台として、段階ごとに機材を追加する。</p>
 <div class="gantt">
   <div class="h" style="text-align:left">段階(対象席数・機材構成)</div>
@@ -202,7 +186,7 @@
 <p class="note">作業:段階1=手法確立(研究室の模擬席)/段階2=複数カメラ統合の実装と設置/段階3・4=Pi追加と横展開、8週目に評価・まとめ<br>
 単価:Pi一式15,528円(本体9,900+クーラー1,100+電源2,860+microSD 1,668)、カメラ3,980円、USBアクティブ延長9.7m 2,083円、取付金具・配線モール約1,000円(見積)</p>
 
-<h2>8. 段階別の追加機材と成本</h2>
+<h2>7. 段階別の追加機材と成本</h2>
 <table>
   <tr><th>段階</th><th>対象席数</th><th>カメラ(累計)</th><th>Pi(累計)</th><th style="width:36%">追加する機材</th><th>追加費用</th><th>累計費用</th></tr>
   <tr><td>段階1</td><td>〜12席</td><td>1台</td><td>1台</td><td>Pi一式、カメラ1</td><td>19,508円</td><td>19,508円</td></tr>
