@@ -6,3 +6,4 @@ models/
 # Runtime state of main.py
 queue.db
 config.cache.json
+docs/
