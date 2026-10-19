@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 from utils import load_config, point_in_polygon, bbox_bottom_center
 
-VERSION = "1.1"
+VERSION = "1.2"
 
 
 # ---------------------------------------------------------------------------
