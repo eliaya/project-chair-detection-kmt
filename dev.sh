@@ -5,6 +5,8 @@
 #
 #   --reset  delete all local data (web/.wrangler/state, web/.dev.vars) and start from a clean
 #            environment; the app then opens the setup wizard.
+#   Sample data (site name, device, camera, zones, floor plan) is added while the local D1 has
+#   none of them (web/scripts/seed.ts).
 #   Defaults: this repo, port 5173. --host also serves the LAN, so a Pi can reach /api/*.
 set -euo pipefail
 
@@ -48,6 +50,7 @@ fi
 
 # Applies only pending migrations; CI skips wrangler's confirmation prompt.
 CI=true npm run db:migrate:local
+npm run --silent seed
 
 echo "[dev] $WEB → http://localhost:${PORT}  (Setup code: SETUP_TOKEN in web/.dev.vars)"
 exec npm run dev -- --port "$PORT" --strictPort --host

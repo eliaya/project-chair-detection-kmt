@@ -31,11 +31,15 @@ SMOKE_EMAIL=you@example.com SMOKE_PASSWORD=... npm run smoke
 # 任意: SMOKE_SETUP_CODE=<SETUP_TOKEN> で「初期化後は /api/setup が閉じている」ことも確認
 ```
 
-平面図のお試しデータ（約 100 席の店をランダムに作り、ローカル D1 に保存。保存済みの平面図は `-- --force` のときだけ置き換え）:
+お試しデータ（サイト名、デバイス `pi1`、`config.json` のカメラとゾーン、約 100 席のランダムな平面図）は、
+ローカル D1 にデバイス・カメラ・ゾーン・平面図がひとつもなければ `./dev.sh` が自動で入れます。
+手動で入れ直すときは `-- --force`（同じ ID のデータを上書き。セットアップで決めたサイト名はそのまま）:
 
 ```sh
-npm run seed:floorplan
+npm run seed -- --force
 ```
+
+デバイスのトークンは捨てているので、Pi をつなぐときは「デバイス」で「トークン再発行」してください。
 
 ## デプロイ
 

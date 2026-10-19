@@ -22,7 +22,7 @@
     "db:migrate:local": "wrangler d1 migrations apply kmt-occupancy --local",
     "db:migrate:remote": "wrangler d1 migrations apply kmt-occupancy --remote",
     "smoke": "node scripts/smoke.ts",
-    "seed:floorplan": "node scripts/seed-floorplan.ts"
+    "seed": "node scripts/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

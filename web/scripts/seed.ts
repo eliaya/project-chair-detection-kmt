@@ -1,10 +1,22 @@
-// Writes a random ~100-seat restaurant floor plan into the local D1, for trying the floor plan page.
-// Usage: npm run seed:floorplan [-- --force]   (--force replaces a plan that is already saved)
+// Sample data for local dev, written to the local D1: a site name, a Pi with the camera and
+// zones from ../config.json, and a random ~100-seat restaurant floor plan.
+// Usage: npm run seed [-- --force]
+// Skips when a device, camera, zone or floor plan already exists; --force overwrites the sample
+// records (same ids) instead. A site name set in the setup wizard is always kept.
 import { execFileSync } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { floorplanSchema } from '../shared/schemas.ts'
+import config from '../../config.json' with { type: 'json' }
+import {
+  cameraSchema,
+  deviceSchema,
+  floorplanSchema,
+  siteNameSchema,
+  zoneSchema,
+} from '../shared/schemas.ts'
+import { sha256 } from '../worker/auth.ts'
 
 const d1 = (...args: string[]) =>
   execFileSync('npx', ['wrangler', 'd1', 'execute', 'kmt-occupancy', '--local', '--json', ...args], {
@@ -12,12 +24,48 @@ const d1 = (...args: string[]) =>
     env: { ...process.env, CI: 'true' },
   })
 
-const saved = JSON.parse(d1('--command', "SELECT 1 FROM settings WHERE key = 'floorplan'"))[0].results
-if (saved.length && !process.argv.includes('--force')) {
+const [{ n }] = JSON.parse(
+  d1('--command', `SELECT (SELECT count(*) FROM devices) + (SELECT count(*) FROM cameras)
+    + (SELECT count(*) FROM zones) + (SELECT count(*) FROM settings WHERE key = 'floorplan') AS n`)
+)[0].results
+if (n && !process.argv.includes('--force')) {
   // eslint-disable-next-line no-console
-  console.error('A floor plan is already saved; run with --force to replace it.')
-  process.exit(1)
+  console.log('[seed] local data already exists; skipped (npm run seed -- --force to overwrite)')
+  process.exit(0)
 }
+
+const sql = (v: unknown) => `'${String(v).replaceAll("'", "''")}'`
+const statements: string[] = []
+
+const site = siteNameSchema.parse({ site_name: 'サンプル店舗' })
+statements.push(`INSERT INTO settings (key, value) VALUES ('site_name', ${sql(JSON.stringify(site.site_name))})
+  ON CONFLICT (key) DO NOTHING;`)
+
+// The token is thrown away: issue one with トークン再発行 on the device page when a Pi connects.
+const device = deviceSchema.parse({ id: 'pi1', name: 'ホール Pi' })
+statements.push(`INSERT INTO devices (id, name, token_hash)
+  VALUES (${sql(device.id)}, ${sql(device.name)}, ${sql(await sha256(randomBytes(32).toString('base64url')))})
+  ON CONFLICT (id) DO UPDATE SET name = excluded.name;`)
+
+const cameras = config.cameras.map((c) =>
+  cameraSchema.parse({
+    id: c.id, device_id: device.id, device_path: c.device, fps: c.fps, width: c.resolution[0], height: c.resolution[1],
+  })
+)
+for (const c of cameras)
+  statements.push(`INSERT INTO cameras (id, device_id, device_path, fps, width, height)
+  VALUES (${sql(c.id)}, ${sql(c.device_id)}, ${sql(c.device_path)}, ${c.fps}, ${c.width}, ${c.height})
+  ON CONFLICT (id) DO UPDATE SET device_id = excluded.device_id, device_path = excluded.device_path,
+    fps = excluded.fps, width = excluded.width, height = excluded.height;`)
+
+const zones = config.zones.map((z) =>
+  zoneSchema.parse({ id: z.id, camera_id: z.camera, description: z.description, seats: z.seats })
+)
+for (const z of zones)
+  statements.push(`INSERT INTO zones (id, camera_id, description, seats)
+  VALUES (${sql(z.id)}, ${sql(z.camera_id)}, ${sql(z.description)}, ${sql(JSON.stringify(z.seats))})
+  ON CONFLICT (id) DO UPDATE SET camera_id = excluded.camera_id, description = excluded.description,
+    seats = excluded.seats;`)
 
 // Half heights (cm) of the shapes in src/features/floorplan/furniture.ts, so items stand on the floor.
 const halfHeight = { table2: 36, table4: 36, table6: 36, round: 36, counter: 52.5, chair: 44, stool: 37.5 }
@@ -79,12 +127,13 @@ const plan = floorplanSchema.parse({
   items,
 })
 
+statements.push(`INSERT INTO settings (key, value) VALUES ('floorplan', ${sql(JSON.stringify(plan))})
+  ON CONFLICT (key) DO UPDATE SET value = excluded.value;`)
+
 const dir = mkdtempSync(join(tmpdir(), 'kmt-seed-'))
 try {
   const file = join(dir, 'seed.sql')
-  const json = JSON.stringify(plan).replaceAll("'", "''")
-  writeFileSync(file,
-    `INSERT INTO settings (key, value) VALUES ('floorplan', '${json}') ON CONFLICT (key) DO UPDATE SET value = excluded.value;`)
+  writeFileSync(file, statements.join('\n'))
   d1('--file', file)
 } finally {
   rmSync(dir, { recursive: true, force: true })
@@ -92,6 +141,6 @@ try {
 const count = (k: Kind) => plan.items.filter((i) => i.model_url === `proc:${k}`).length
 const seats = count('chair') + count('stool')
 // eslint-disable-next-line no-console
-console.log(`Saved a ${W / 100} m × ${D / 100} m plan: ${plan.items.length - seats} tables/counters, ${seats} seats.`)
-// eslint-disable-next-line no-console
-console.log('Reload the floor plan page (設定 → 平面図) to see it.')
+console.log(`[seed] site name, device ${device.id}, ${cameras.length} camera(s), ${zones.length} zone(s) ` +
+  `(${zones.reduce((a, z) => a + z.seats.flat().length, 0)} seats), and a ${W / 100} m × ${D / 100} m floor plan ` +
+  `(${plan.items.length - seats} tables/counters, ${seats} seats)`)
