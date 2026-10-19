@@ -23,6 +23,7 @@ import { Route as AuthenticatedAdminsIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedCamerasIndexRouteImport } from './routes/_authenticated/cameras/index'
 import { Route as AuthenticatedDevicesIndexRouteImport } from './routes/_authenticated/devices/index'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedFloorplanIndexRouteImport } from './routes/_authenticated/floorplan/index'
 import { Route as AuthenticatedHistoryIndexRouteImport } from './routes/_authenticated/history/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
@@ -105,6 +106,12 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFloorplanIndexRoute =
+  AuthenticatedFloorplanIndexRouteImport.update({
+    id: '/floorplan/',
+    path: '/floorplan/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedHistoryIndexRoute =
   AuthenticatedHistoryIndexRouteImport.update({
     id: '/history/',
@@ -162,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/admins/': typeof AuthenticatedAdminsIndexRoute
   '/cameras/': typeof AuthenticatedCamerasIndexRoute
   '/devices/': typeof AuthenticatedDevicesIndexRoute
+  '/floorplan/': typeof AuthenticatedFloorplanIndexRoute
   '/history/': typeof AuthenticatedHistoryIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/site/': typeof AuthenticatedSiteIndexRoute
@@ -183,6 +191,7 @@ export interface FileRoutesByTo {
   '/admins': typeof AuthenticatedAdminsIndexRoute
   '/cameras': typeof AuthenticatedCamerasIndexRoute
   '/devices': typeof AuthenticatedDevicesIndexRoute
+  '/floorplan': typeof AuthenticatedFloorplanIndexRoute
   '/history': typeof AuthenticatedHistoryIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/site': typeof AuthenticatedSiteIndexRoute
@@ -207,6 +216,7 @@ export interface FileRoutesById {
   '/_authenticated/admins/': typeof AuthenticatedAdminsIndexRoute
   '/_authenticated/cameras/': typeof AuthenticatedCamerasIndexRoute
   '/_authenticated/devices/': typeof AuthenticatedDevicesIndexRoute
+  '/_authenticated/floorplan/': typeof AuthenticatedFloorplanIndexRoute
   '/_authenticated/history/': typeof AuthenticatedHistoryIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/site/': typeof AuthenticatedSiteIndexRoute
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/admins/'
     | '/cameras/'
     | '/devices/'
+    | '/floorplan/'
     | '/history/'
     | '/settings/'
     | '/site/'
@@ -252,6 +263,7 @@ export interface FileRouteTypes {
     | '/admins'
     | '/cameras'
     | '/devices'
+    | '/floorplan'
     | '/history'
     | '/settings'
     | '/site'
@@ -275,6 +287,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admins/'
     | '/_authenticated/cameras/'
     | '/_authenticated/devices/'
+    | '/_authenticated/floorplan/'
     | '/_authenticated/history/'
     | '/_authenticated/settings/'
     | '/_authenticated/site/'
@@ -393,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/floorplan/': {
+      id: '/_authenticated/floorplan/'
+      path: '/floorplan'
+      fullPath: '/floorplan/'
+      preLoaderRoute: typeof AuthenticatedFloorplanIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/history/': {
       id: '/_authenticated/history/'
       path: '/history'
@@ -470,6 +490,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminsIndexRoute: typeof AuthenticatedAdminsIndexRoute
   AuthenticatedCamerasIndexRoute: typeof AuthenticatedCamerasIndexRoute
   AuthenticatedDevicesIndexRoute: typeof AuthenticatedDevicesIndexRoute
+  AuthenticatedFloorplanIndexRoute: typeof AuthenticatedFloorplanIndexRoute
   AuthenticatedHistoryIndexRoute: typeof AuthenticatedHistoryIndexRoute
   AuthenticatedSiteIndexRoute: typeof AuthenticatedSiteIndexRoute
   AuthenticatedThresholdsIndexRoute: typeof AuthenticatedThresholdsIndexRoute
@@ -483,6 +504,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminsIndexRoute: AuthenticatedAdminsIndexRoute,
   AuthenticatedCamerasIndexRoute: AuthenticatedCamerasIndexRoute,
   AuthenticatedDevicesIndexRoute: AuthenticatedDevicesIndexRoute,
+  AuthenticatedFloorplanIndexRoute: AuthenticatedFloorplanIndexRoute,
   AuthenticatedHistoryIndexRoute: AuthenticatedHistoryIndexRoute,
   AuthenticatedSiteIndexRoute: AuthenticatedSiteIndexRoute,
   AuthenticatedThresholdsIndexRoute: AuthenticatedThresholdsIndexRoute,

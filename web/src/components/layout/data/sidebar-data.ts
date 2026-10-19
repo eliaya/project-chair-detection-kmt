@@ -3,6 +3,7 @@ import {
   Cpu,
   History,
   LayoutDashboard,
+  MapIcon,
   Monitor,
   Palette,
   ShieldCheck,
@@ -24,6 +25,7 @@ export const sidebarData: SidebarData = {
     {
       title: 'nav.setup',
       items: [
+        { title: 'nav.floorplan', url: '/floorplan', icon: MapIcon },
         { title: 'nav.zones', url: '/zones', icon: SquareDashed },
         { title: 'nav.cameras', url: '/cameras', icon: Camera },
         { title: 'nav.devices', url: '/devices', icon: Cpu },
