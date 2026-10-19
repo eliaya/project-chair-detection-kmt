@@ -49,11 +49,29 @@ async function body<T extends z.ZodType>(
   req: Request,
   schema: T
 ): Promise<z.infer<T>> {
+  const tooLarge = new HttpError(413, 'Payload too large')
   if (Number(req.headers.get('Content-Length') ?? 0) > MAX_BODY_BYTES)
-    throw new HttpError(413, 'Payload too large')
-  const data = await req.json().catch(() => {
-    throw new HttpError(400, 'Invalid JSON')
+    throw tooLarge
+  // A chunked body has no Content-Length, so count bytes while reading.
+  let size = 0
+  const capped = req.body?.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, c) {
+        size += chunk.byteLength
+        if (size > MAX_BODY_BYTES) throw tooLarge
+        c.enqueue(chunk)
+      },
+    })
+  )
+  const text = await new Response(capped).text().catch(() => {
+    throw size > MAX_BODY_BYTES ? tooLarge : new HttpError(400, 'Invalid JSON')
   })
+  let data: unknown
+  try {
+    data = JSON.parse(text)
+  } catch {
+    throw new HttpError(400, 'Invalid JSON')
+  }
   const r = schema.safeParse(data)
   if (!r.success)
     throw new HttpError(
