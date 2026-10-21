@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { type Field, FieldsForm } from '@/features/resources/fields-form'
 import { setupSchema } from '../../../shared/schemas'
 
-const route = getRouteApi('/(auth)/setup')
+const route = getRouteApi('/admin/(auth)/setup')
 const FORM_ID = 'onboarding-form'
 
 const steps = ['site', 'admin', 'done'] as const
@@ -164,7 +164,9 @@ export function Onboarding() {
                   disabled={pending || (step !== 'done' && !setup.enabled)}
                   type={showForm ? 'submit' : 'button'}
                   form={showForm ? FORM_ID : undefined}
-                  onClick={showForm ? undefined : () => navigate({ to: '/' })}
+                  onClick={
+                    showForm ? undefined : () => navigate({ to: '/admin' })
+                  }
                 >
                   {pending && <Loader2 className='animate-spin' />}
                   {actionLabel}

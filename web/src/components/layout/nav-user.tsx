@@ -78,7 +78,7 @@ export function NavUser({ user }: NavUserProps) {
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
-                  <Link to='/settings/appearance'>
+                  <Link to='/admin/settings/appearance'>
                     <Palette />
                     {t('profile.appearance')}
                   </Link>

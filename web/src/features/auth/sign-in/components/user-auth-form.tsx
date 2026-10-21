@@ -52,7 +52,7 @@ export function UserAuthForm({
       api.post<Me>('/auth/login', data).then((r) => r.data),
     onSuccess: (me) => {
       queryClient.setQueryData(meQuery.queryKey, me)
-      navigate({ to: redirectTo || '/', replace: true })
+      navigate({ to: redirectTo || '/admin', replace: true })
     },
   })
 

@@ -58,13 +58,13 @@ const queryClient = new QueryClient({
           toast.error(t('error.sessionExpired'))
           queryClient.removeQueries({ queryKey: meQuery.queryKey })
           const redirect = `${router.history.location.href}`
-          router.navigate({ to: '/sign-in', search: { redirect } })
+          router.navigate({ to: '/admin/sign-in', search: { redirect } })
         }
         if (error.response?.status === 500) {
           toast.error(t('error.server'))
           // Only navigate to error page in production to avoid disrupting HMR in development
           if (import.meta.env.PROD) {
-            router.navigate({ to: '/500' })
+            router.navigate({ to: '/admin/500' })
           }
         }
         if (error.response?.status === 403) {

@@ -4,7 +4,6 @@ import {
   History,
   LayoutDashboard,
   MapIcon,
-  Monitor,
   Palette,
   ShieldCheck,
   SlidersHorizontal,
@@ -18,20 +17,20 @@ export const sidebarData: SidebarData = {
     {
       title: 'nav.monitoring',
       items: [
-        { title: 'nav.dashboard', url: '/', icon: LayoutDashboard },
-        { title: 'nav.history', url: '/history', icon: History },
+        { title: 'nav.dashboard', url: '/admin', icon: LayoutDashboard },
+        { title: 'nav.history', url: '/admin/history', icon: History },
       ],
     },
     {
       title: 'nav.setup',
       items: [
-        { title: 'nav.floorplan', url: '/floorplan', icon: MapIcon },
-        { title: 'nav.zones', url: '/zones', icon: SquareDashed },
-        { title: 'nav.cameras', url: '/cameras', icon: Camera },
-        { title: 'nav.devices', url: '/devices', icon: Cpu },
+        { title: 'nav.floorplan', url: '/admin/floorplan', icon: MapIcon },
+        { title: 'nav.zones', url: '/admin/zones', icon: SquareDashed },
+        { title: 'nav.cameras', url: '/admin/cameras', icon: Camera },
+        { title: 'nav.devices', url: '/admin/devices', icon: Cpu },
         {
           title: 'nav.thresholds',
-          url: '/thresholds',
+          url: '/admin/thresholds',
           icon: SlidersHorizontal,
         },
       ],
@@ -39,10 +38,13 @@ export const sidebarData: SidebarData = {
     {
       title: 'nav.administration',
       items: [
-        { title: 'nav.site', url: '/site', icon: Store },
-        { title: 'nav.admins', url: '/admins', icon: ShieldCheck },
-        { title: 'nav.appearance', url: '/settings/appearance', icon: Palette },
-        { title: 'nav.display', url: '/settings/display', icon: Monitor },
+        { title: 'nav.site', url: '/admin/site', icon: Store },
+        { title: 'nav.admins', url: '/admin/admins', icon: ShieldCheck },
+        {
+          title: 'nav.appearance',
+          url: '/admin/settings/appearance',
+          icon: Palette,
+        },
       ],
     },
   ],

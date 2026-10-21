@@ -132,7 +132,7 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link to='/devices'>{t('dashboard.registerDevice')}</Link>
+              <Link to='/admin/devices'>{t('dashboard.registerDevice')}</Link>
             </Button>
           </CardContent>
         </Card>

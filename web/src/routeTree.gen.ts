@@ -9,541 +9,531 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as PortalRouteImport } from './routes/portal'
-import { Route as authSetupRouteImport } from './routes/(auth)/setup'
-import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
-import { Route as errors401RouteImport } from './routes/(errors)/401'
-import { Route as errors403RouteImport } from './routes/(errors)/403'
-import { Route as errors404RouteImport } from './routes/(errors)/404'
-import { Route as errors500RouteImport } from './routes/(errors)/500'
-import { Route as errors503RouteImport } from './routes/(errors)/503'
-import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
-import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
-import { Route as AuthenticatedAdminsIndexRouteImport } from './routes/_authenticated/admins/index'
-import { Route as AuthenticatedCamerasIndexRouteImport } from './routes/_authenticated/cameras/index'
-import { Route as AuthenticatedDevicesIndexRouteImport } from './routes/_authenticated/devices/index'
-import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
-import { Route as AuthenticatedFloorplanIndexRouteImport } from './routes/_authenticated/floorplan/index'
-import { Route as AuthenticatedHistoryIndexRouteImport } from './routes/_authenticated/history/index'
-import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
-import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
-import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
-import { Route as AuthenticatedSiteIndexRouteImport } from './routes/_authenticated/site/index'
-import { Route as AuthenticatedThresholdsIndexRouteImport } from './routes/_authenticated/thresholds/index'
-import { Route as AuthenticatedZonesIndexRouteImport } from './routes/_authenticated/zones/index'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminAuthenticatedRouteRouteImport } from './routes/admin/_authenticated/route'
+import { Route as AdminauthSetupRouteImport } from './routes/admin/(auth)/setup'
+import { Route as AdminauthSignInRouteImport } from './routes/admin/(auth)/sign-in'
+import { Route as Adminerrors401RouteImport } from './routes/admin/(errors)/401'
+import { Route as Adminerrors403RouteImport } from './routes/admin/(errors)/403'
+import { Route as Adminerrors404RouteImport } from './routes/admin/(errors)/404'
+import { Route as Adminerrors500RouteImport } from './routes/admin/(errors)/500'
+import { Route as Adminerrors503RouteImport } from './routes/admin/(errors)/503'
+import { Route as AdminAuthenticatedIndexRouteImport } from './routes/admin/_authenticated/index'
+import { Route as AdminAuthenticatedSettingsRouteRouteImport } from './routes/admin/_authenticated/settings/route'
+import { Route as AdminAuthenticatedAdminsIndexRouteImport } from './routes/admin/_authenticated/admins/index'
+import { Route as AdminAuthenticatedCamerasIndexRouteImport } from './routes/admin/_authenticated/cameras/index'
+import { Route as AdminAuthenticatedDevicesIndexRouteImport } from './routes/admin/_authenticated/devices/index'
+import { Route as AdminAuthenticatedErrorsErrorRouteImport } from './routes/admin/_authenticated/errors/$error'
+import { Route as AdminAuthenticatedFloorplanIndexRouteImport } from './routes/admin/_authenticated/floorplan/index'
+import { Route as AdminAuthenticatedHistoryIndexRouteImport } from './routes/admin/_authenticated/history/index'
+import { Route as AdminAuthenticatedSettingsIndexRouteImport } from './routes/admin/_authenticated/settings/index'
+import { Route as AdminAuthenticatedSettingsAppearanceRouteImport } from './routes/admin/_authenticated/settings/appearance'
+import { Route as AdminAuthenticatedSiteIndexRouteImport } from './routes/admin/_authenticated/site/index'
+import { Route as AdminAuthenticatedThresholdsIndexRouteImport } from './routes/admin/_authenticated/thresholds/index'
+import { Route as AdminAuthenticatedZonesIndexRouteImport } from './routes/admin/_authenticated/zones/index'
 
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PortalRoute = PortalRouteImport.update({
-  id: '/portal',
-  path: '/portal',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const authSetupRoute = authSetupRouteImport.update({
-  id: '/(auth)/setup',
-  path: '/setup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const authSignInRoute = authSignInRouteImport.update({
-  id: '/(auth)/sign-in',
-  path: '/sign-in',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const errors401Route = errors401RouteImport.update({
-  id: '/(errors)/401',
-  path: '/401',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const errors403Route = errors403RouteImport.update({
-  id: '/(errors)/403',
-  path: '/403',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const errors404Route = errors404RouteImport.update({
-  id: '/(errors)/404',
-  path: '/404',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const errors500Route = errors500RouteImport.update({
-  id: '/(errors)/500',
-  path: '/500',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const errors503Route = errors503RouteImport.update({
-  id: '/(errors)/503',
-  path: '/503',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedSettingsRouteRoute =
-  AuthenticatedSettingsRouteRouteImport.update({
+const AdminAuthenticatedRouteRoute = AdminAuthenticatedRouteRouteImport.update({
+  id: '/admin/_authenticated',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminauthSetupRoute = AdminauthSetupRouteImport.update({
+  id: '/admin/(auth)/setup',
+  path: '/admin/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminauthSignInRoute = AdminauthSignInRouteImport.update({
+  id: '/admin/(auth)/sign-in',
+  path: '/admin/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Adminerrors401Route = Adminerrors401RouteImport.update({
+  id: '/admin/(errors)/401',
+  path: '/admin/401',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Adminerrors403Route = Adminerrors403RouteImport.update({
+  id: '/admin/(errors)/403',
+  path: '/admin/403',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Adminerrors404Route = Adminerrors404RouteImport.update({
+  id: '/admin/(errors)/404',
+  path: '/admin/404',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Adminerrors500Route = Adminerrors500RouteImport.update({
+  id: '/admin/(errors)/500',
+  path: '/admin/500',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Adminerrors503Route = Adminerrors503RouteImport.update({
+  id: '/admin/(errors)/503',
+  path: '/admin/503',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAuthenticatedIndexRoute = AdminAuthenticatedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminAuthenticatedRouteRoute,
+} as any)
+const AdminAuthenticatedSettingsRouteRoute =
+  AdminAuthenticatedSettingsRouteRouteImport.update({
     id: '/settings',
     path: '/settings',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    getParentRoute: () => AdminAuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminsIndexRoute =
-  AuthenticatedAdminsIndexRouteImport.update({
+const AdminAuthenticatedAdminsIndexRoute =
+  AdminAuthenticatedAdminsIndexRouteImport.update({
     id: '/admins/',
     path: '/admins/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    getParentRoute: () => AdminAuthenticatedRouteRoute,
   } as any)
-const AuthenticatedCamerasIndexRoute =
-  AuthenticatedCamerasIndexRouteImport.update({
+const AdminAuthenticatedCamerasIndexRoute =
+  AdminAuthenticatedCamerasIndexRouteImport.update({
     id: '/cameras/',
     path: '/cameras/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    getParentRoute: () => AdminAuthenticatedRouteRoute,
   } as any)
-const AuthenticatedDevicesIndexRoute =
-  AuthenticatedDevicesIndexRouteImport.update({
+const AdminAuthenticatedDevicesIndexRoute =
+  AdminAuthenticatedDevicesIndexRouteImport.update({
     id: '/devices/',
     path: '/devices/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    getParentRoute: () => AdminAuthenticatedRouteRoute,
   } as any)
-const AuthenticatedErrorsErrorRoute =
-  AuthenticatedErrorsErrorRouteImport.update({
+const AdminAuthenticatedErrorsErrorRoute =
+  AdminAuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
     path: '/errors/$error',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    getParentRoute: () => AdminAuthenticatedRouteRoute,
   } as any)
-const AuthenticatedFloorplanIndexRoute =
-  AuthenticatedFloorplanIndexRouteImport.update({
+const AdminAuthenticatedFloorplanIndexRoute =
+  AdminAuthenticatedFloorplanIndexRouteImport.update({
     id: '/floorplan/',
     path: '/floorplan/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    getParentRoute: () => AdminAuthenticatedRouteRoute,
   } as any)
-const AuthenticatedHistoryIndexRoute =
-  AuthenticatedHistoryIndexRouteImport.update({
+const AdminAuthenticatedHistoryIndexRoute =
+  AdminAuthenticatedHistoryIndexRouteImport.update({
     id: '/history/',
     path: '/history/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    getParentRoute: () => AdminAuthenticatedRouteRoute,
   } as any)
-const AuthenticatedSettingsIndexRoute =
-  AuthenticatedSettingsIndexRouteImport.update({
+const AdminAuthenticatedSettingsIndexRoute =
+  AdminAuthenticatedSettingsIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+    getParentRoute: () => AdminAuthenticatedSettingsRouteRoute,
   } as any)
-const AuthenticatedSettingsAppearanceRoute =
-  AuthenticatedSettingsAppearanceRouteImport.update({
+const AdminAuthenticatedSettingsAppearanceRoute =
+  AdminAuthenticatedSettingsAppearanceRouteImport.update({
     id: '/appearance',
     path: '/appearance',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+    getParentRoute: () => AdminAuthenticatedSettingsRouteRoute,
   } as any)
-const AuthenticatedSettingsDisplayRoute =
-  AuthenticatedSettingsDisplayRouteImport.update({
-    id: '/display',
-    path: '/display',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+const AdminAuthenticatedSiteIndexRoute =
+  AdminAuthenticatedSiteIndexRouteImport.update({
+    id: '/site/',
+    path: '/site/',
+    getParentRoute: () => AdminAuthenticatedRouteRoute,
   } as any)
-const AuthenticatedSiteIndexRoute = AuthenticatedSiteIndexRouteImport.update({
-  id: '/site/',
-  path: '/site/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedThresholdsIndexRoute =
-  AuthenticatedThresholdsIndexRouteImport.update({
+const AdminAuthenticatedThresholdsIndexRoute =
+  AdminAuthenticatedThresholdsIndexRouteImport.update({
     id: '/thresholds/',
     path: '/thresholds/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    getParentRoute: () => AdminAuthenticatedRouteRoute,
   } as any)
-const AuthenticatedZonesIndexRoute = AuthenticatedZonesIndexRouteImport.update({
-  id: '/zones/',
-  path: '/zones/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
+const AdminAuthenticatedZonesIndexRoute =
+  AdminAuthenticatedZonesIndexRouteImport.update({
+    id: '/zones/',
+    path: '/zones/',
+    getParentRoute: () => AdminAuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AuthenticatedIndexRoute
-  '/portal': typeof PortalRoute
-  '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
-  '/setup': typeof authSetupRoute
-  '/sign-in': typeof authSignInRoute
-  '/401': typeof errors401Route
-  '/403': typeof errors403Route
-  '/404': typeof errors404Route
-  '/500': typeof errors500Route
-  '/503': typeof errors503Route
-  '/errors/$error': typeof AuthenticatedErrorsErrorRoute
-  '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
-  '/settings/display': typeof AuthenticatedSettingsDisplayRoute
-  '/admins/': typeof AuthenticatedAdminsIndexRoute
-  '/cameras/': typeof AuthenticatedCamerasIndexRoute
-  '/devices/': typeof AuthenticatedDevicesIndexRoute
-  '/floorplan/': typeof AuthenticatedFloorplanIndexRoute
-  '/history/': typeof AuthenticatedHistoryIndexRoute
-  '/settings/': typeof AuthenticatedSettingsIndexRoute
-  '/site/': typeof AuthenticatedSiteIndexRoute
-  '/thresholds/': typeof AuthenticatedThresholdsIndexRoute
-  '/zones/': typeof AuthenticatedZonesIndexRoute
+  '/': typeof IndexRoute
+  '/admin': typeof AdminAuthenticatedRouteRouteWithChildren
+  '/admin/settings': typeof AdminAuthenticatedSettingsRouteRouteWithChildren
+  '/admin/setup': typeof AdminauthSetupRoute
+  '/admin/sign-in': typeof AdminauthSignInRoute
+  '/admin/401': typeof Adminerrors401Route
+  '/admin/403': typeof Adminerrors403Route
+  '/admin/404': typeof Adminerrors404Route
+  '/admin/500': typeof Adminerrors500Route
+  '/admin/503': typeof Adminerrors503Route
+  '/admin/': typeof AdminAuthenticatedIndexRoute
+  '/admin/errors/$error': typeof AdminAuthenticatedErrorsErrorRoute
+  '/admin/settings/appearance': typeof AdminAuthenticatedSettingsAppearanceRoute
+  '/admin/admins/': typeof AdminAuthenticatedAdminsIndexRoute
+  '/admin/cameras/': typeof AdminAuthenticatedCamerasIndexRoute
+  '/admin/devices/': typeof AdminAuthenticatedDevicesIndexRoute
+  '/admin/floorplan/': typeof AdminAuthenticatedFloorplanIndexRoute
+  '/admin/history/': typeof AdminAuthenticatedHistoryIndexRoute
+  '/admin/settings/': typeof AdminAuthenticatedSettingsIndexRoute
+  '/admin/site/': typeof AdminAuthenticatedSiteIndexRoute
+  '/admin/thresholds/': typeof AdminAuthenticatedThresholdsIndexRoute
+  '/admin/zones/': typeof AdminAuthenticatedZonesIndexRoute
 }
 export interface FileRoutesByTo {
-  '/portal': typeof PortalRoute
-  '/setup': typeof authSetupRoute
-  '/sign-in': typeof authSignInRoute
-  '/401': typeof errors401Route
-  '/403': typeof errors403Route
-  '/404': typeof errors404Route
-  '/500': typeof errors500Route
-  '/503': typeof errors503Route
-  '/': typeof AuthenticatedIndexRoute
-  '/errors/$error': typeof AuthenticatedErrorsErrorRoute
-  '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
-  '/settings/display': typeof AuthenticatedSettingsDisplayRoute
-  '/admins': typeof AuthenticatedAdminsIndexRoute
-  '/cameras': typeof AuthenticatedCamerasIndexRoute
-  '/devices': typeof AuthenticatedDevicesIndexRoute
-  '/floorplan': typeof AuthenticatedFloorplanIndexRoute
-  '/history': typeof AuthenticatedHistoryIndexRoute
-  '/settings': typeof AuthenticatedSettingsIndexRoute
-  '/site': typeof AuthenticatedSiteIndexRoute
-  '/thresholds': typeof AuthenticatedThresholdsIndexRoute
-  '/zones': typeof AuthenticatedZonesIndexRoute
+  '/': typeof IndexRoute
+  '/admin/setup': typeof AdminauthSetupRoute
+  '/admin/sign-in': typeof AdminauthSignInRoute
+  '/admin/401': typeof Adminerrors401Route
+  '/admin/403': typeof Adminerrors403Route
+  '/admin/404': typeof Adminerrors404Route
+  '/admin/500': typeof Adminerrors500Route
+  '/admin/503': typeof Adminerrors503Route
+  '/admin': typeof AdminAuthenticatedIndexRoute
+  '/admin/errors/$error': typeof AdminAuthenticatedErrorsErrorRoute
+  '/admin/settings/appearance': typeof AdminAuthenticatedSettingsAppearanceRoute
+  '/admin/admins': typeof AdminAuthenticatedAdminsIndexRoute
+  '/admin/cameras': typeof AdminAuthenticatedCamerasIndexRoute
+  '/admin/devices': typeof AdminAuthenticatedDevicesIndexRoute
+  '/admin/floorplan': typeof AdminAuthenticatedFloorplanIndexRoute
+  '/admin/history': typeof AdminAuthenticatedHistoryIndexRoute
+  '/admin/settings': typeof AdminAuthenticatedSettingsIndexRoute
+  '/admin/site': typeof AdminAuthenticatedSiteIndexRoute
+  '/admin/thresholds': typeof AdminAuthenticatedThresholdsIndexRoute
+  '/admin/zones': typeof AdminAuthenticatedZonesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/portal': typeof PortalRoute
-  '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
-  '/(auth)/setup': typeof authSetupRoute
-  '/(auth)/sign-in': typeof authSignInRoute
-  '/(errors)/401': typeof errors401Route
-  '/(errors)/403': typeof errors403Route
-  '/(errors)/404': typeof errors404Route
-  '/(errors)/500': typeof errors500Route
-  '/(errors)/503': typeof errors503Route
-  '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
-  '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
-  '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
-  '/_authenticated/admins/': typeof AuthenticatedAdminsIndexRoute
-  '/_authenticated/cameras/': typeof AuthenticatedCamerasIndexRoute
-  '/_authenticated/devices/': typeof AuthenticatedDevicesIndexRoute
-  '/_authenticated/floorplan/': typeof AuthenticatedFloorplanIndexRoute
-  '/_authenticated/history/': typeof AuthenticatedHistoryIndexRoute
-  '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
-  '/_authenticated/site/': typeof AuthenticatedSiteIndexRoute
-  '/_authenticated/thresholds/': typeof AuthenticatedThresholdsIndexRoute
-  '/_authenticated/zones/': typeof AuthenticatedZonesIndexRoute
+  '/': typeof IndexRoute
+  '/admin/_authenticated': typeof AdminAuthenticatedRouteRouteWithChildren
+  '/admin/_authenticated/settings': typeof AdminAuthenticatedSettingsRouteRouteWithChildren
+  '/admin/(auth)/setup': typeof AdminauthSetupRoute
+  '/admin/(auth)/sign-in': typeof AdminauthSignInRoute
+  '/admin/(errors)/401': typeof Adminerrors401Route
+  '/admin/(errors)/403': typeof Adminerrors403Route
+  '/admin/(errors)/404': typeof Adminerrors404Route
+  '/admin/(errors)/500': typeof Adminerrors500Route
+  '/admin/(errors)/503': typeof Adminerrors503Route
+  '/admin/_authenticated/': typeof AdminAuthenticatedIndexRoute
+  '/admin/_authenticated/errors/$error': typeof AdminAuthenticatedErrorsErrorRoute
+  '/admin/_authenticated/settings/appearance': typeof AdminAuthenticatedSettingsAppearanceRoute
+  '/admin/_authenticated/admins/': typeof AdminAuthenticatedAdminsIndexRoute
+  '/admin/_authenticated/cameras/': typeof AdminAuthenticatedCamerasIndexRoute
+  '/admin/_authenticated/devices/': typeof AdminAuthenticatedDevicesIndexRoute
+  '/admin/_authenticated/floorplan/': typeof AdminAuthenticatedFloorplanIndexRoute
+  '/admin/_authenticated/history/': typeof AdminAuthenticatedHistoryIndexRoute
+  '/admin/_authenticated/settings/': typeof AdminAuthenticatedSettingsIndexRoute
+  '/admin/_authenticated/site/': typeof AdminAuthenticatedSiteIndexRoute
+  '/admin/_authenticated/thresholds/': typeof AdminAuthenticatedThresholdsIndexRoute
+  '/admin/_authenticated/zones/': typeof AdminAuthenticatedZonesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/portal'
-    | '/settings'
-    | '/setup'
-    | '/sign-in'
-    | '/401'
-    | '/403'
-    | '/404'
-    | '/500'
-    | '/503'
-    | '/errors/$error'
-    | '/settings/appearance'
-    | '/settings/display'
-    | '/admins/'
-    | '/cameras/'
-    | '/devices/'
-    | '/floorplan/'
-    | '/history/'
-    | '/settings/'
-    | '/site/'
-    | '/thresholds/'
-    | '/zones/'
+    | '/admin'
+    | '/admin/settings'
+    | '/admin/setup'
+    | '/admin/sign-in'
+    | '/admin/401'
+    | '/admin/403'
+    | '/admin/404'
+    | '/admin/500'
+    | '/admin/503'
+    | '/admin/'
+    | '/admin/errors/$error'
+    | '/admin/settings/appearance'
+    | '/admin/admins/'
+    | '/admin/cameras/'
+    | '/admin/devices/'
+    | '/admin/floorplan/'
+    | '/admin/history/'
+    | '/admin/settings/'
+    | '/admin/site/'
+    | '/admin/thresholds/'
+    | '/admin/zones/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/portal'
-    | '/setup'
-    | '/sign-in'
-    | '/401'
-    | '/403'
-    | '/404'
-    | '/500'
-    | '/503'
     | '/'
-    | '/errors/$error'
-    | '/settings/appearance'
-    | '/settings/display'
-    | '/admins'
-    | '/cameras'
-    | '/devices'
-    | '/floorplan'
-    | '/history'
-    | '/settings'
-    | '/site'
-    | '/thresholds'
-    | '/zones'
+    | '/admin/setup'
+    | '/admin/sign-in'
+    | '/admin/401'
+    | '/admin/403'
+    | '/admin/404'
+    | '/admin/500'
+    | '/admin/503'
+    | '/admin'
+    | '/admin/errors/$error'
+    | '/admin/settings/appearance'
+    | '/admin/admins'
+    | '/admin/cameras'
+    | '/admin/devices'
+    | '/admin/floorplan'
+    | '/admin/history'
+    | '/admin/settings'
+    | '/admin/site'
+    | '/admin/thresholds'
+    | '/admin/zones'
   id:
     | '__root__'
-    | '/_authenticated'
-    | '/portal'
-    | '/_authenticated/settings'
-    | '/(auth)/setup'
-    | '/(auth)/sign-in'
-    | '/(errors)/401'
-    | '/(errors)/403'
-    | '/(errors)/404'
-    | '/(errors)/500'
-    | '/(errors)/503'
-    | '/_authenticated/'
-    | '/_authenticated/errors/$error'
-    | '/_authenticated/settings/appearance'
-    | '/_authenticated/settings/display'
-    | '/_authenticated/admins/'
-    | '/_authenticated/cameras/'
-    | '/_authenticated/devices/'
-    | '/_authenticated/floorplan/'
-    | '/_authenticated/history/'
-    | '/_authenticated/settings/'
-    | '/_authenticated/site/'
-    | '/_authenticated/thresholds/'
-    | '/_authenticated/zones/'
+    | '/'
+    | '/admin/_authenticated'
+    | '/admin/_authenticated/settings'
+    | '/admin/(auth)/setup'
+    | '/admin/(auth)/sign-in'
+    | '/admin/(errors)/401'
+    | '/admin/(errors)/403'
+    | '/admin/(errors)/404'
+    | '/admin/(errors)/500'
+    | '/admin/(errors)/503'
+    | '/admin/_authenticated/'
+    | '/admin/_authenticated/errors/$error'
+    | '/admin/_authenticated/settings/appearance'
+    | '/admin/_authenticated/admins/'
+    | '/admin/_authenticated/cameras/'
+    | '/admin/_authenticated/devices/'
+    | '/admin/_authenticated/floorplan/'
+    | '/admin/_authenticated/history/'
+    | '/admin/_authenticated/settings/'
+    | '/admin/_authenticated/site/'
+    | '/admin/_authenticated/thresholds/'
+    | '/admin/_authenticated/zones/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  PortalRoute: typeof PortalRoute
-  authSetupRoute: typeof authSetupRoute
-  authSignInRoute: typeof authSignInRoute
-  errors401Route: typeof errors401Route
-  errors403Route: typeof errors403Route
-  errors404Route: typeof errors404Route
-  errors500Route: typeof errors500Route
-  errors503Route: typeof errors503Route
+  IndexRoute: typeof IndexRoute
+  AdminAuthenticatedRouteRoute: typeof AdminAuthenticatedRouteRouteWithChildren
+  AdminauthSetupRoute: typeof AdminauthSetupRoute
+  AdminauthSignInRoute: typeof AdminauthSignInRoute
+  Adminerrors401Route: typeof Adminerrors401Route
+  Adminerrors403Route: typeof Adminerrors403Route
+  Adminerrors404Route: typeof Adminerrors404Route
+  Adminerrors500Route: typeof Adminerrors500Route
+  Adminerrors503Route: typeof Adminerrors503Route
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/portal': {
-      id: '/portal'
-      path: '/portal'
-      fullPath: '/portal'
-      preLoaderRoute: typeof PortalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/setup': {
-      id: '/(auth)/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof authSetupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(auth)/sign-in': {
-      id: '/(auth)/sign-in'
-      path: '/sign-in'
-      fullPath: '/sign-in'
-      preLoaderRoute: typeof authSignInRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(errors)/401': {
-      id: '/(errors)/401'
-      path: '/401'
-      fullPath: '/401'
-      preLoaderRoute: typeof errors401RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(errors)/403': {
-      id: '/(errors)/403'
-      path: '/403'
-      fullPath: '/403'
-      preLoaderRoute: typeof errors403RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(errors)/404': {
-      id: '/(errors)/404'
-      path: '/404'
-      fullPath: '/404'
-      preLoaderRoute: typeof errors404RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(errors)/500': {
-      id: '/(errors)/500'
-      path: '/500'
-      fullPath: '/500'
-      preLoaderRoute: typeof errors500RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(errors)/503': {
-      id: '/(errors)/503'
-      path: '/503'
-      fullPath: '/503'
-      preLoaderRoute: typeof errors503RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/': {
-      id: '/_authenticated/'
+    '/': {
+      id: '/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/settings': {
-      id: '/_authenticated/settings'
+    '/admin/_authenticated': {
+      id: '/admin/_authenticated'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminAuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/(auth)/setup': {
+      id: '/admin/(auth)/setup'
+      path: '/admin/setup'
+      fullPath: '/admin/setup'
+      preLoaderRoute: typeof AdminauthSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/(auth)/sign-in': {
+      id: '/admin/(auth)/sign-in'
+      path: '/admin/sign-in'
+      fullPath: '/admin/sign-in'
+      preLoaderRoute: typeof AdminauthSignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/(errors)/401': {
+      id: '/admin/(errors)/401'
+      path: '/admin/401'
+      fullPath: '/admin/401'
+      preLoaderRoute: typeof Adminerrors401RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/(errors)/403': {
+      id: '/admin/(errors)/403'
+      path: '/admin/403'
+      fullPath: '/admin/403'
+      preLoaderRoute: typeof Adminerrors403RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/(errors)/404': {
+      id: '/admin/(errors)/404'
+      path: '/admin/404'
+      fullPath: '/admin/404'
+      preLoaderRoute: typeof Adminerrors404RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/(errors)/500': {
+      id: '/admin/(errors)/500'
+      path: '/admin/500'
+      fullPath: '/admin/500'
+      preLoaderRoute: typeof Adminerrors500RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/(errors)/503': {
+      id: '/admin/(errors)/503'
+      path: '/admin/503'
+      fullPath: '/admin/503'
+      preLoaderRoute: typeof Adminerrors503RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/_authenticated/': {
+      id: '/admin/_authenticated/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminAuthenticatedIndexRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
+    }
+    '/admin/_authenticated/settings': {
+      id: '/admin/_authenticated/settings'
       path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AuthenticatedSettingsRouteRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminAuthenticatedSettingsRouteRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
     }
-    '/_authenticated/admins/': {
-      id: '/_authenticated/admins/'
+    '/admin/_authenticated/admins/': {
+      id: '/admin/_authenticated/admins/'
       path: '/admins'
-      fullPath: '/admins/'
-      preLoaderRoute: typeof AuthenticatedAdminsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      fullPath: '/admin/admins/'
+      preLoaderRoute: typeof AdminAuthenticatedAdminsIndexRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
     }
-    '/_authenticated/cameras/': {
-      id: '/_authenticated/cameras/'
+    '/admin/_authenticated/cameras/': {
+      id: '/admin/_authenticated/cameras/'
       path: '/cameras'
-      fullPath: '/cameras/'
-      preLoaderRoute: typeof AuthenticatedCamerasIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      fullPath: '/admin/cameras/'
+      preLoaderRoute: typeof AdminAuthenticatedCamerasIndexRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
     }
-    '/_authenticated/devices/': {
-      id: '/_authenticated/devices/'
+    '/admin/_authenticated/devices/': {
+      id: '/admin/_authenticated/devices/'
       path: '/devices'
-      fullPath: '/devices/'
-      preLoaderRoute: typeof AuthenticatedDevicesIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      fullPath: '/admin/devices/'
+      preLoaderRoute: typeof AdminAuthenticatedDevicesIndexRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
     }
-    '/_authenticated/errors/$error': {
-      id: '/_authenticated/errors/$error'
+    '/admin/_authenticated/errors/$error': {
+      id: '/admin/_authenticated/errors/$error'
       path: '/errors/$error'
-      fullPath: '/errors/$error'
-      preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      fullPath: '/admin/errors/$error'
+      preLoaderRoute: typeof AdminAuthenticatedErrorsErrorRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
     }
-    '/_authenticated/floorplan/': {
-      id: '/_authenticated/floorplan/'
+    '/admin/_authenticated/floorplan/': {
+      id: '/admin/_authenticated/floorplan/'
       path: '/floorplan'
-      fullPath: '/floorplan/'
-      preLoaderRoute: typeof AuthenticatedFloorplanIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      fullPath: '/admin/floorplan/'
+      preLoaderRoute: typeof AdminAuthenticatedFloorplanIndexRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
     }
-    '/_authenticated/history/': {
-      id: '/_authenticated/history/'
+    '/admin/_authenticated/history/': {
+      id: '/admin/_authenticated/history/'
       path: '/history'
-      fullPath: '/history/'
-      preLoaderRoute: typeof AuthenticatedHistoryIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      fullPath: '/admin/history/'
+      preLoaderRoute: typeof AdminAuthenticatedHistoryIndexRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
     }
-    '/_authenticated/settings/': {
-      id: '/_authenticated/settings/'
+    '/admin/_authenticated/settings/': {
+      id: '/admin/_authenticated/settings/'
       path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
+      fullPath: '/admin/settings/'
+      preLoaderRoute: typeof AdminAuthenticatedSettingsIndexRouteImport
+      parentRoute: typeof AdminAuthenticatedSettingsRouteRoute
     }
-    '/_authenticated/settings/appearance': {
-      id: '/_authenticated/settings/appearance'
+    '/admin/_authenticated/settings/appearance': {
+      id: '/admin/_authenticated/settings/appearance'
       path: '/appearance'
-      fullPath: '/settings/appearance'
-      preLoaderRoute: typeof AuthenticatedSettingsAppearanceRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
+      fullPath: '/admin/settings/appearance'
+      preLoaderRoute: typeof AdminAuthenticatedSettingsAppearanceRouteImport
+      parentRoute: typeof AdminAuthenticatedSettingsRouteRoute
     }
-    '/_authenticated/settings/display': {
-      id: '/_authenticated/settings/display'
-      path: '/display'
-      fullPath: '/settings/display'
-      preLoaderRoute: typeof AuthenticatedSettingsDisplayRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
-    '/_authenticated/site/': {
-      id: '/_authenticated/site/'
+    '/admin/_authenticated/site/': {
+      id: '/admin/_authenticated/site/'
       path: '/site'
-      fullPath: '/site/'
-      preLoaderRoute: typeof AuthenticatedSiteIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      fullPath: '/admin/site/'
+      preLoaderRoute: typeof AdminAuthenticatedSiteIndexRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
     }
-    '/_authenticated/thresholds/': {
-      id: '/_authenticated/thresholds/'
+    '/admin/_authenticated/thresholds/': {
+      id: '/admin/_authenticated/thresholds/'
       path: '/thresholds'
-      fullPath: '/thresholds/'
-      preLoaderRoute: typeof AuthenticatedThresholdsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      fullPath: '/admin/thresholds/'
+      preLoaderRoute: typeof AdminAuthenticatedThresholdsIndexRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
     }
-    '/_authenticated/zones/': {
-      id: '/_authenticated/zones/'
+    '/admin/_authenticated/zones/': {
+      id: '/admin/_authenticated/zones/'
       path: '/zones'
-      fullPath: '/zones/'
-      preLoaderRoute: typeof AuthenticatedZonesIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      fullPath: '/admin/zones/'
+      preLoaderRoute: typeof AdminAuthenticatedZonesIndexRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
     }
   }
 }
 
-interface AuthenticatedSettingsRouteRouteChildren {
-  AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
-  AuthenticatedSettingsDisplayRoute: typeof AuthenticatedSettingsDisplayRoute
-  AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
+interface AdminAuthenticatedSettingsRouteRouteChildren {
+  AdminAuthenticatedSettingsAppearanceRoute: typeof AdminAuthenticatedSettingsAppearanceRoute
+  AdminAuthenticatedSettingsIndexRoute: typeof AdminAuthenticatedSettingsIndexRoute
 }
 
-const AuthenticatedSettingsRouteRouteChildren: AuthenticatedSettingsRouteRouteChildren =
+const AdminAuthenticatedSettingsRouteRouteChildren: AdminAuthenticatedSettingsRouteRouteChildren =
   {
-    AuthenticatedSettingsAppearanceRoute: AuthenticatedSettingsAppearanceRoute,
-    AuthenticatedSettingsDisplayRoute: AuthenticatedSettingsDisplayRoute,
-    AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
+    AdminAuthenticatedSettingsAppearanceRoute:
+      AdminAuthenticatedSettingsAppearanceRoute,
+    AdminAuthenticatedSettingsIndexRoute: AdminAuthenticatedSettingsIndexRoute,
   }
 
-const AuthenticatedSettingsRouteRouteWithChildren =
-  AuthenticatedSettingsRouteRoute._addFileChildren(
-    AuthenticatedSettingsRouteRouteChildren,
+const AdminAuthenticatedSettingsRouteRouteWithChildren =
+  AdminAuthenticatedSettingsRouteRoute._addFileChildren(
+    AdminAuthenticatedSettingsRouteRouteChildren,
   )
 
-interface AuthenticatedRouteRouteChildren {
-  AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
-  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-  AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
-  AuthenticatedAdminsIndexRoute: typeof AuthenticatedAdminsIndexRoute
-  AuthenticatedCamerasIndexRoute: typeof AuthenticatedCamerasIndexRoute
-  AuthenticatedDevicesIndexRoute: typeof AuthenticatedDevicesIndexRoute
-  AuthenticatedFloorplanIndexRoute: typeof AuthenticatedFloorplanIndexRoute
-  AuthenticatedHistoryIndexRoute: typeof AuthenticatedHistoryIndexRoute
-  AuthenticatedSiteIndexRoute: typeof AuthenticatedSiteIndexRoute
-  AuthenticatedThresholdsIndexRoute: typeof AuthenticatedThresholdsIndexRoute
-  AuthenticatedZonesIndexRoute: typeof AuthenticatedZonesIndexRoute
+interface AdminAuthenticatedRouteRouteChildren {
+  AdminAuthenticatedSettingsRouteRoute: typeof AdminAuthenticatedSettingsRouteRouteWithChildren
+  AdminAuthenticatedIndexRoute: typeof AdminAuthenticatedIndexRoute
+  AdminAuthenticatedErrorsErrorRoute: typeof AdminAuthenticatedErrorsErrorRoute
+  AdminAuthenticatedAdminsIndexRoute: typeof AdminAuthenticatedAdminsIndexRoute
+  AdminAuthenticatedCamerasIndexRoute: typeof AdminAuthenticatedCamerasIndexRoute
+  AdminAuthenticatedDevicesIndexRoute: typeof AdminAuthenticatedDevicesIndexRoute
+  AdminAuthenticatedFloorplanIndexRoute: typeof AdminAuthenticatedFloorplanIndexRoute
+  AdminAuthenticatedHistoryIndexRoute: typeof AdminAuthenticatedHistoryIndexRoute
+  AdminAuthenticatedSiteIndexRoute: typeof AdminAuthenticatedSiteIndexRoute
+  AdminAuthenticatedThresholdsIndexRoute: typeof AdminAuthenticatedThresholdsIndexRoute
+  AdminAuthenticatedZonesIndexRoute: typeof AdminAuthenticatedZonesIndexRoute
 }
 
-const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
-  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
-  AuthenticatedAdminsIndexRoute: AuthenticatedAdminsIndexRoute,
-  AuthenticatedCamerasIndexRoute: AuthenticatedCamerasIndexRoute,
-  AuthenticatedDevicesIndexRoute: AuthenticatedDevicesIndexRoute,
-  AuthenticatedFloorplanIndexRoute: AuthenticatedFloorplanIndexRoute,
-  AuthenticatedHistoryIndexRoute: AuthenticatedHistoryIndexRoute,
-  AuthenticatedSiteIndexRoute: AuthenticatedSiteIndexRoute,
-  AuthenticatedThresholdsIndexRoute: AuthenticatedThresholdsIndexRoute,
-  AuthenticatedZonesIndexRoute: AuthenticatedZonesIndexRoute,
-}
+const AdminAuthenticatedRouteRouteChildren: AdminAuthenticatedRouteRouteChildren =
+  {
+    AdminAuthenticatedSettingsRouteRoute:
+      AdminAuthenticatedSettingsRouteRouteWithChildren,
+    AdminAuthenticatedIndexRoute: AdminAuthenticatedIndexRoute,
+    AdminAuthenticatedErrorsErrorRoute: AdminAuthenticatedErrorsErrorRoute,
+    AdminAuthenticatedAdminsIndexRoute: AdminAuthenticatedAdminsIndexRoute,
+    AdminAuthenticatedCamerasIndexRoute: AdminAuthenticatedCamerasIndexRoute,
+    AdminAuthenticatedDevicesIndexRoute: AdminAuthenticatedDevicesIndexRoute,
+    AdminAuthenticatedFloorplanIndexRoute:
+      AdminAuthenticatedFloorplanIndexRoute,
+    AdminAuthenticatedHistoryIndexRoute: AdminAuthenticatedHistoryIndexRoute,
+    AdminAuthenticatedSiteIndexRoute: AdminAuthenticatedSiteIndexRoute,
+    AdminAuthenticatedThresholdsIndexRoute:
+      AdminAuthenticatedThresholdsIndexRoute,
+    AdminAuthenticatedZonesIndexRoute: AdminAuthenticatedZonesIndexRoute,
+  }
 
-const AuthenticatedRouteRouteWithChildren =
-  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+const AdminAuthenticatedRouteRouteWithChildren =
+  AdminAuthenticatedRouteRoute._addFileChildren(
+    AdminAuthenticatedRouteRouteChildren,
+  )
 
 const rootRouteChildren: RootRouteChildren = {
-  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  PortalRoute: PortalRoute,
-  authSetupRoute: authSetupRoute,
-  authSignInRoute: authSignInRoute,
-  errors401Route: errors401Route,
-  errors403Route: errors403Route,
-  errors404Route: errors404Route,
-  errors500Route: errors500Route,
-  errors503Route: errors503Route,
+  IndexRoute: IndexRoute,
+  AdminAuthenticatedRouteRoute: AdminAuthenticatedRouteRouteWithChildren,
+  AdminauthSetupRoute: AdminauthSetupRoute,
+  AdminauthSignInRoute: AdminauthSignInRoute,
+  Adminerrors401Route: Adminerrors401Route,
+  Adminerrors403Route: Adminerrors403Route,
+  Adminerrors404Route: Adminerrors404Route,
+  Adminerrors500Route: Adminerrors500Route,
+  Adminerrors503Route: Adminerrors503Route,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

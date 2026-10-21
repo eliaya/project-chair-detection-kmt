@@ -12,8 +12,8 @@
 #   ./scripts/dev.sh <worktree-path> <port>    # another worktree / port
 #
 # After start (5173, or the next free port when 5173 is taken and no port was given):
-#   - Admin:  http://localhost:5173          (LAN: http://<Mac IP>:5173)
-#   - Portal: http://localhost:5173/portal   (public, no login)
+#   - Portal: http://localhost:5173          (public, no login; LAN: http://<Mac IP>:5173)
+#   - Admin:  http://localhost:5173/admin
 #   - API:    http://localhost:5173/api/*    (a Pi on the LAN can POST here)
 
 set -e

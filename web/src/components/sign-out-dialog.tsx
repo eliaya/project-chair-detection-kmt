@@ -21,7 +21,7 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     // Preserve current location for redirect after sign-in
     const currentPath = location.href
     await navigate({
-      to: '/sign-in',
+      to: '/admin/sign-in',
       search: { redirect: currentPath },
       replace: true,
     })

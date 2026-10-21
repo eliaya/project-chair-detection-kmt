@@ -18,7 +18,6 @@ export const zhCN: Dict = {
   'nav.site': '站点',
   'nav.admins': '管理员',
   'nav.appearance': '外观',
-  'nav.display': '显示',
 
   'theme.toggle': '切换主题',
   'theme.heading': '主题',
@@ -338,15 +337,5 @@ export const zhCN: Dict = {
   'settings.fontDesc': '设置仪表板使用的字体。',
   'settings.themeDesc': '选择仪表板的主题。',
   'settings.updatePreferences': '更新偏好设置',
-  'settings.displayDesc': '打开或关闭项目，以控制应用显示的内容。',
-  'settings.sidebarItemsDesc': '选择要显示在侧边栏的项目。',
-  'settings.selectAtLeastOne': '请至少选择一个项目。',
-  'settings.updateDisplay': '更新显示设置',
-  'settings.item.recents': '最近使用',
-  'settings.item.home': '主页',
-  'settings.item.applications': '应用程序',
-  'settings.item.desktop': '桌面',
-  'settings.item.downloads': '下载',
-  'settings.item.documents': '文档',
   'submitted.title': '您提交了以下内容：',
 }

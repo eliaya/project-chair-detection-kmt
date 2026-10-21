@@ -18,7 +18,6 @@ export const en = {
   'nav.site': 'Site',
   'nav.admins': 'Admins',
   'nav.appearance': 'Appearance',
-  'nav.display': 'Display',
 
   'theme.toggle': 'Toggle theme',
   'theme.heading': 'Theme',
@@ -357,17 +356,5 @@ export const en = {
   'settings.fontDesc': 'Set the font you want to use in the dashboard.',
   'settings.themeDesc': 'Select the theme for the dashboard.',
   'settings.updatePreferences': 'Update preferences',
-  'settings.displayDesc':
-    "Turn items on or off to control what's displayed in the app.",
-  'settings.sidebarItemsDesc':
-    'Select the items you want to display in the sidebar.',
-  'settings.selectAtLeastOne': 'You have to select at least one item.',
-  'settings.updateDisplay': 'Update display',
-  'settings.item.recents': 'Recents',
-  'settings.item.home': 'Home',
-  'settings.item.applications': 'Applications',
-  'settings.item.desktop': 'Desktop',
-  'settings.item.downloads': 'Downloads',
-  'settings.item.documents': 'Documents',
   'submitted.title': 'You submitted the following values:',
 }

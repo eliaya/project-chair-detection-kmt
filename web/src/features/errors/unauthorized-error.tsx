@@ -18,7 +18,7 @@ export function UnauthorisedError() {
           <Button variant='outline' onClick={() => history.go(-1)}>
             {t('errorPage.goBack')}
           </Button>
-          <Button onClick={() => navigate({ to: '/' })}>
+          <Button onClick={() => navigate({ to: '/admin' })}>
             {t('errorPage.home')}
           </Button>
         </div>

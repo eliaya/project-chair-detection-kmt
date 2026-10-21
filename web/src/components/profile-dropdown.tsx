@@ -46,10 +46,12 @@ export function ProfileDropdown() {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
-              <Link to='/admins'>{t('nav.admins')}</Link>
+              <Link to='/admin/admins'>{t('nav.admins')}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to='/settings/appearance'>{t('profile.appearance')}</Link>
+              <Link to='/admin/settings/appearance'>
+                {t('profile.appearance')}
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />

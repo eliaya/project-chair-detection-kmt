@@ -1,6 +1,6 @@
 import { Outlet } from '@tanstack/react-router'
 import { useI18n } from '@/i18n'
-import { Monitor, Palette } from 'lucide-react'
+import { Palette } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { LanguageSwitch } from '@/components/language-switch'
@@ -16,13 +16,8 @@ export function Settings() {
   const sidebarNavItems = [
     {
       title: t('nav.appearance'),
-      href: '/settings/appearance',
+      href: '/admin/settings/appearance',
       icon: <Palette size={18} />,
-    },
-    {
-      title: t('nav.display'),
-      href: '/settings/display',
-      icon: <Monitor size={18} />,
     },
   ]
 

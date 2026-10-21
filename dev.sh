@@ -71,6 +71,6 @@ CI=true npm run db:migrate:local
 if [ "$SEED" = 1 ]; then npm run --silent seed; fi
 
 LAN_IP="$(ipconfig getifaddr en0 2>/dev/null || true)"
-echo "[dev] $WEB → http://localhost:${PORT}${LAN_IP:+  (LAN: http://$LAN_IP:$PORT)}"
-echo "[dev] public portal: http://localhost:${PORT}/portal  (Setup code: SETUP_TOKEN in web/.dev.vars)"
+echo "[dev] $WEB → portal http://localhost:${PORT}${LAN_IP:+  (LAN: http://$LAN_IP:$PORT)}"
+echo "[dev] admin: http://localhost:${PORT}/admin  (Setup code: SETUP_TOKEN in web/.dev.vars)"
 exec npm run dev -- --port "$PORT" --strictPort --host

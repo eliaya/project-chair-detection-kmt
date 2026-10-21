@@ -18,7 +18,6 @@ export const zhTW: Dict = {
   'nav.site': '站點',
   'nav.admins': '管理員',
   'nav.appearance': '外觀',
-  'nav.display': '顯示',
 
   'theme.toggle': '切換主題',
   'theme.heading': '主題',
@@ -338,15 +337,5 @@ export const zhTW: Dict = {
   'settings.fontDesc': '設定儀表板使用的字型。',
   'settings.themeDesc': '選擇儀表板的主題。',
   'settings.updatePreferences': '更新偏好設定',
-  'settings.displayDesc': '開啟或關閉項目，以控制應用程式顯示的內容。',
-  'settings.sidebarItemsDesc': '選擇要顯示在側邊欄的項目。',
-  'settings.selectAtLeastOne': '請至少選擇一個項目。',
-  'settings.updateDisplay': '更新顯示設定',
-  'settings.item.recents': '最近使用',
-  'settings.item.home': '首頁',
-  'settings.item.applications': '應用程式',
-  'settings.item.desktop': '桌面',
-  'settings.item.downloads': '下載',
-  'settings.item.documents': '文件',
   'submitted.title': '您提交了以下內容：',
 }

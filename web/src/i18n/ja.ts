@@ -18,7 +18,6 @@ export const ja: Dict = {
   'nav.site': 'サイト',
   'nav.admins': '管理者',
   'nav.appearance': '外観',
-  'nav.display': '表示',
 
   'theme.toggle': 'テーマを切り替え',
   'theme.heading': 'テーマ',
@@ -350,16 +349,5 @@ export const ja: Dict = {
   'settings.fontDesc': 'ダッシュボードで使うフォントを設定します。',
   'settings.themeDesc': 'ダッシュボードのテーマを選択します。',
   'settings.updatePreferences': '設定を更新',
-  'settings.displayDesc':
-    '項目のオン・オフで、アプリに表示する内容を切り替えます。',
-  'settings.sidebarItemsDesc': 'サイドバーに表示する項目を選択します。',
-  'settings.selectAtLeastOne': '1つ以上選択してください。',
-  'settings.updateDisplay': '表示を更新',
-  'settings.item.recents': '最近使用した項目',
-  'settings.item.home': 'ホーム',
-  'settings.item.applications': 'アプリケーション',
-  'settings.item.desktop': 'デスクトップ',
-  'settings.item.downloads': 'ダウンロード',
-  'settings.item.documents': '書類',
   'submitted.title': '次の値を送信しました:',
 }
