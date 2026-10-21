@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { type z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useI18n } from '@/i18n'
 import { Eraser, MousePointer2, PenLine, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { api } from '@/lib/api'
+import { api, listQuery } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -13,9 +14,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { PageShell } from '@/components/layout/page-shell'
+import { seatId, tableId } from '../../../shared/occupancy'
+import { type zoneSchema } from '../../../shared/schemas'
 import { Floorplanner } from '../../../vendor/blueprint3d/floorplanner/floorplanner'
 import { floorplannerModes } from '../../../vendor/blueprint3d/floorplanner/floorplanner_view'
 import type { Item } from '../../../vendor/blueprint3d/items/item'
@@ -53,6 +65,17 @@ const wallModes = {
 type WallMode = keyof typeof wallModes
 
 type Planner = { model: Model; three: ThreeMain; floorplanner: Floorplanner }
+type Zone = z.infer<typeof zoneSchema>
+
+// Chairs and stools stand for a seat, tables for a table; the portal colours them.
+const binds: Record<string, 'seat' | 'table'> = {
+  'proc:chair': 'seat',
+  'proc:stool': 'seat',
+  'proc:table2': 'table',
+  'proc:table4': 'table',
+  'proc:table6': 'table',
+  'proc:round': 'table',
+}
 
 export function FloorplanPage() {
   const { t } = useI18n()
@@ -70,6 +93,8 @@ export function FloorplanPage() {
   const [wallMode, setWallMode] = useState<WallMode>('move')
   const [camera, setCamera] = useState<'2d' | '3d'>('3d')
   const [selected, setSelected] = useState<Item | null>(null)
+  const [seat, setSeat] = useState<string>()
+  const zones = useQuery(listQuery<Zone>('zones'))
 
   useEffect(() => {
     if (!plan.isSuccess || !wallsHost.current || !layoutHost.current) return
@@ -87,7 +112,10 @@ export function FloorplanPage() {
       spin: false,
     })
     const floorplanner = new Floorplanner(canvas.id, model.floorplan)
-    three.itemSelectedCallbacks.add(setSelected)
+    three.itemSelectedCallbacks.add((item) => {
+      setSelected(item)
+      setSeat(item.metadata.seat)
+    })
     three.itemUnselectedCallbacks.add(() => setSelected(null))
     model.loadSerialized(JSON.stringify(plan.data ?? emptyPlan))
     planner.current = { model, three, floorplanner }
@@ -135,6 +163,14 @@ export function FloorplanPage() {
       itemType: 1,
       modelUrl: `proc:${kind}`,
     })
+  const bind = (v: string) => {
+    if (!selected) return
+    // The item is a three.js object kept in state only to re-render; it is meant to change.
+    // eslint-disable-next-line react-hooks/immutability
+    selected.metadata.seat = v === 'none' ? undefined : v
+    setSeat(selected.metadata.seat)
+  }
+  const bindKind = selected && binds[selected.metadata.modelUrl ?? '']
   const remove = () => {
     if (!selected) return
     selected.removeFromScene()
@@ -214,6 +250,43 @@ export function FloorplanPage() {
               <Trash2 />
               {t('floorplan.delete')}
             </Button>
+            {bindKind && (
+              <Select value={seat ?? 'none'} onValueChange={bind}>
+                <SelectTrigger
+                  className='min-w-40'
+                  aria-label={t(`floorplan.${bindKind}`)}
+                >
+                  <span className='text-muted-foreground'>
+                    {t(`floorplan.${bindKind}`)}
+                  </span>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='none'>{t('floorplan.unbound')}</SelectItem>
+                  {zones.data?.map((zone) => (
+                    <SelectGroup key={zone.id}>
+                      <SelectLabel>{zone.id}</SelectLabel>
+                      {zone.seats.flatMap((seats, i) =>
+                        bindKind === 'table' ? (
+                          <SelectItem key={i} value={tableId(zone.id, i)}>
+                            {seats.map((s) => s.name).join(' · ')}
+                          </SelectItem>
+                        ) : (
+                          seats.map((s, j) => (
+                            <SelectItem
+                              key={`${i}-${j}`}
+                              value={seatId(zone.id, i, j)}
+                            >
+                              {s.name}
+                            </SelectItem>
+                          ))
+                        )
+                      )}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </>
         )}
       </div>

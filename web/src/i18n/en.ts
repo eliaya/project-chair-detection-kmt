@@ -221,6 +221,7 @@ export const en = {
   'portal.live': 'Live',
   'portal.cameraOffline': 'Offline',
   'portal.noSeats': 'No seats assigned to this camera',
+  'portal.noFloorplan': 'No floor plan yet',
 
   'history.desc': 'Table status changes (latest 500)',
   'history.time': 'Time',
@@ -295,6 +296,9 @@ export const en = {
   'floorplan.counter': 'Counter',
   'floorplan.chair': 'Chair',
   'floorplan.stool': 'Stool',
+  'floorplan.seat': 'Seat',
+  'floorplan.table': 'Table',
+  'floorplan.unbound': 'Not linked',
 
   'zones.desc':
     'Seating areas (polygons) on the camera image, and the tables and seats in them.',

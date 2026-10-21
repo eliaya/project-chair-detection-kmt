@@ -210,6 +210,7 @@ export const zhCN: Dict = {
   'portal.live': '实时',
   'portal.cameraOffline': '离线',
   'portal.noSeats': '此摄像头没有设置座位',
+  'portal.noFloorplan': '尚未创建平面图',
 
   'history.desc': '桌位状态变化记录（最新 500 条）',
   'history.time': '时间',
@@ -282,6 +283,9 @@ export const zhCN: Dict = {
   'floorplan.counter': '吧台',
   'floorplan.chair': '椅子',
   'floorplan.stool': '高脚凳',
+  'floorplan.seat': '对应座位',
+  'floorplan.table': '对应桌',
+  'floorplan.unbound': '未绑定',
 
   'zones.desc': '摄像头画面上的座位区域（多边形），以及其中的桌与座位。',
   'zones.descPlaceholder': '双人座（面对面）× 4 桌',

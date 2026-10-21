@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { type PublicSeat } from '../../../shared/occupancy'
+import { FloorplanTab } from './floorplan'
 
 type PublicOccupancy = {
   now: string
@@ -11,6 +13,7 @@ type PublicOccupancy = {
   used_seats: number
   unknown_seats: number
   cameras: { live: boolean; tables: PublicSeat[][] }[]
+  floorplan: PublicSeat['state'][]
 }
 
 const green = 'text-emerald-600 dark:text-emerald-400'
@@ -83,9 +86,19 @@ export function Portal() {
       </header>
 
       <div className='grid flex-1 gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'>
-        <section className='space-y-6 rounded-2xl bg-muted p-6 sm:p-12'>
+        <Tabs
+          defaultValue='cameras'
+          className='gap-6 rounded-2xl bg-muted p-6 sm:p-12'
+        >
           <div className='flex flex-wrap items-center justify-between gap-4'>
-            <h2 className='text-3xl font-medium'>{t('portal.cameras')}</h2>
+            <TabsList className='h-11'>
+              <TabsTrigger value='cameras' className='px-4 text-base'>
+                {t('portal.cameras')}
+              </TabsTrigger>
+              <TabsTrigger value='floorplan' className='px-4 text-base'>
+                {t('nav.floorplan')}
+              </TabsTrigger>
+            </TabsList>
             <ul className='flex flex-wrap gap-4 text-muted-foreground'>
               {legend.map((l) => (
                 <li key={l.state} className='flex items-center gap-2'>
@@ -97,7 +110,7 @@ export function Portal() {
               ))}
             </ul>
           </div>
-          <div className='grid gap-6 xl:grid-cols-2'>
+          <TabsContent value='cameras' className='grid gap-6 xl:grid-cols-2'>
             {data?.cameras.map((cam, i) => (
               <article
                 key={i}
@@ -149,8 +162,14 @@ export function Portal() {
                 )}
               </article>
             ))}
-          </div>
-        </section>
+          </TabsContent>
+          <TabsContent
+            value='floorplan'
+            className='min-h-[min(70svh,48rem)] overflow-hidden rounded-2xl border bg-card lg:min-h-0'
+          >
+            <FloorplanTab states={data?.floorplan ?? []} />
+          </TabsContent>
+        </Tabs>
 
         {/* On a phone the counts come first. */}
         <section className='order-first grid gap-6 lg:order-none'>

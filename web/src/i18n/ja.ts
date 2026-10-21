@@ -216,6 +216,7 @@ export const ja: Dict = {
   'portal.live': 'ライブ',
   'portal.cameraOffline': 'オフライン',
   'portal.noSeats': 'このカメラには座席がありません',
+  'portal.noFloorplan': '平面図はまだありません',
 
   'history.desc': '卓の状態が変化した記録（最新500件）',
   'history.time': '日時',
@@ -291,6 +292,9 @@ export const ja: Dict = {
   'floorplan.counter': 'カウンター',
   'floorplan.chair': '椅子',
   'floorplan.stool': 'スツール',
+  'floorplan.seat': '対応する座席',
+  'floorplan.table': '対応するテーブル',
+  'floorplan.unbound': '未設定',
 
   'zones.desc': 'カメラ画像上の座席区域（多角形）と、その中の卓・座席です。',
   'zones.descPlaceholder': '2人席（向かい合わせ）× 4テーブル',

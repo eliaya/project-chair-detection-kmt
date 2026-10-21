@@ -210,6 +210,7 @@ export const zhTW: Dict = {
   'portal.live': '即時',
   'portal.cameraOffline': '離線',
   'portal.noSeats': '此攝影機沒有設定座位',
+  'portal.noFloorplan': '尚未建立平面圖',
 
   'history.desc': '桌位狀態變化紀錄（最新 500 筆）',
   'history.time': '時間',
@@ -282,6 +283,9 @@ export const zhTW: Dict = {
   'floorplan.counter': '吧檯',
   'floorplan.chair': '椅子',
   'floorplan.stool': '高腳椅',
+  'floorplan.seat': '對應座位',
+  'floorplan.table': '對應桌',
+  'floorplan.unbound': '未綁定',
 
   'zones.desc': '攝影機畫面上的座位區域（多邊形），以及其中的桌與座位。',
   'zones.descPlaceholder': '雙人座（面對面）× 4 桌',
