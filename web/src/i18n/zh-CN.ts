@@ -18,6 +18,7 @@ export const zhCN: Dict = {
   'nav.site': '站点',
   'nav.admins': '管理员',
   'nav.appearance': '外观',
+  'nav.apiKeys': 'API 密钥',
 
   'theme.toggle': '切换主题',
   'theme.heading': '主题',
@@ -73,6 +74,7 @@ export const zhCN: Dict = {
   'field.camera': '摄像头',
   'field.zone': '区域',
   'field.createdAt': '创建时间',
+  'field.apiKey': 'API 密钥',
   'field.lastSeen': '最后连接',
   'field.devicePath': '设备路径',
   'field.fps': 'FPS',
@@ -258,6 +260,13 @@ export const zhCN: Dict = {
     '半角字母、数字和符号，至少 8 个字符。编辑时留空则不修改。',
   'devices.desc': 'Raspberry Pi 等边缘设备。创建时会签发 API 令牌。',
   'devices.namePlaceholder': 'A 店 入口侧',
+  'apiKeys.desc':
+    '供第三方程序通过 REST API（/api/v1）获取使用历史的密钥。规格：/api/v1/openapi.json',
+  'apiKeys.namePlaceholder': 'POS 对接',
+  'apiKeys.tokenDesc':
+    '此密钥不会再次显示。请以 Authorization: Bearer <密钥> 发送。规格：/api/v1/openapi.json',
+  'apiKeys.rotateDesc':
+    '“{label}”当前的密钥将立即失效，请更新使用它的程序配置。',
   'cameras.desc': '连接到各设备的 USB 摄像头。',
   'floorplan.desc': '店内的墙面，以及桌椅的布局。',
   'floorplan.walls': '墙面',

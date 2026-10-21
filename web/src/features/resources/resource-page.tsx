@@ -26,7 +26,7 @@ import {
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { PageShell } from '@/components/layout/page-shell'
-import { type Device, DeviceConnection } from './connection'
+import { CopyBlock, type Device, DeviceConnection } from './connection'
 import { DataTable } from './data-table'
 import { type Field, FieldsForm } from './fields-form'
 
@@ -50,8 +50,11 @@ export type ResourceDef = {
     format?: (value: unknown, row: Row, i18n: I18n) => string
     cell?: (row: Row, i18n: I18n) => React.ReactNode
   }[]
-  // Adds "re-issue token" (POST /api/<key>/<id>/token) and the Pi connection check
+  // Adds "re-issue token" (POST /api/<key>/<id>/token); devices also get the Pi connection check
   tokenRotation?: boolean
+  // Token dialog texts, when the defaults (which talk about the Pi) do not fit
+  tokenDesc?: Key
+  rotateDesc?: Key
   // Polls the list, for live statuses
   refetchInterval?: number
 }
@@ -219,7 +222,7 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
           open={dialog?.type === 'rotate'}
           onOpenChange={(open) => !open && setDialog(null)}
           title={t('resource.rotate')}
-          desc={t('resource.rotateDesc', { label })}
+          desc={t(def.rotateDesc ?? 'resource.rotateDesc', { label })}
           cancelBtnText={t('common.cancel')}
           confirmText={t('resource.rotateConfirm')}
           isLoading={rotate.isPending}
@@ -231,9 +234,12 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
         <DialogContent>
           <DialogHeader className='text-start'>
             <DialogTitle>{t('resource.tokenTitle')}</DialogTitle>
-            <DialogDescription>{t('resource.tokenDesc')}</DialogDescription>
+            <DialogDescription>
+              {t(def.tokenDesc ?? 'resource.tokenDesc')}
+            </DialogDescription>
           </DialogHeader>
-          {token && (
+          {token && def.key !== 'devices' && <CopyBlock text={token.token} />}
+          {token && def.key === 'devices' && (
             <DeviceConnection
               token={token.token}
               issued={token.row as unknown as Device}

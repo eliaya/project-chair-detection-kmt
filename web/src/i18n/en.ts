@@ -18,6 +18,7 @@ export const en = {
   'nav.site': 'Site',
   'nav.admins': 'Admins',
   'nav.appearance': 'Appearance',
+  'nav.apiKeys': 'API keys',
 
   'theme.toggle': 'Toggle theme',
   'theme.heading': 'Theme',
@@ -74,6 +75,7 @@ export const en = {
   'field.camera': 'Camera',
   'field.zone': 'Zone',
   'field.createdAt': 'Created',
+  'field.apiKey': 'API key',
   'field.lastSeen': 'Last seen',
   'field.devicePath': 'Device path',
   'field.fps': 'FPS',
@@ -271,6 +273,13 @@ export const en = {
   'devices.desc':
     'Edge devices such as a Raspberry Pi. An API token is issued when one is created.',
   'devices.namePlaceholder': 'Store A, entrance side',
+  'apiKeys.desc':
+    'Keys for third-party programs that read the occupancy history over the REST API (/api/v1). Spec: /api/v1/openapi.json',
+  'apiKeys.namePlaceholder': 'POS integration',
+  'apiKeys.tokenDesc':
+    'This key will not be shown again. Send it as Authorization: Bearer <key>. Spec: /api/v1/openapi.json',
+  'apiKeys.rotateDesc':
+    'The current key of "{label}" stops working immediately. Update it in the program that uses it.',
   'cameras.desc': 'USB cameras connected to each device.',
   'floorplan.desc': 'Room walls and the layout of tables and chairs.',
   'floorplan.walls': 'Walls',

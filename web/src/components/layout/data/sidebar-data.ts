@@ -2,6 +2,7 @@ import {
   Camera,
   Cpu,
   History,
+  KeyRound,
   LayoutDashboard,
   MapIcon,
   Palette,
@@ -40,6 +41,7 @@ export const sidebarData: SidebarData = {
       items: [
         { title: 'nav.site', url: '/admin/site', icon: Store },
         { title: 'nav.admins', url: '/admin/admins', icon: ShieldCheck },
+        { title: 'nav.apiKeys', url: '/admin/api-keys', icon: KeyRound },
         {
           title: 'nav.appearance',
           url: '/admin/settings/appearance',

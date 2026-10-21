@@ -18,6 +18,7 @@ export const zhTW: Dict = {
   'nav.site': '站點',
   'nav.admins': '管理員',
   'nav.appearance': '外觀',
+  'nav.apiKeys': 'API 金鑰',
 
   'theme.toggle': '切換主題',
   'theme.heading': '主題',
@@ -73,6 +74,7 @@ export const zhTW: Dict = {
   'field.camera': '攝影機',
   'field.zone': '區域',
   'field.createdAt': '建立時間',
+  'field.apiKey': 'API 金鑰',
   'field.lastSeen': '最後連線',
   'field.devicePath': '裝置路徑',
   'field.fps': 'FPS',
@@ -258,6 +260,13 @@ export const zhTW: Dict = {
     '半形英數字與符號，至少 8 個字元。編輯時留空則不變更。',
   'devices.desc': 'Raspberry Pi 等邊緣裝置。建立時會發行 API 權杖。',
   'devices.namePlaceholder': 'A 店 入口側',
+  'apiKeys.desc':
+    '供第三方程式透過 REST API（/api/v1）取得使用歷史的金鑰。規格：/api/v1/openapi.json',
+  'apiKeys.namePlaceholder': 'POS 串接',
+  'apiKeys.tokenDesc':
+    '此金鑰不會再次顯示。請以 Authorization: Bearer <金鑰> 傳送。規格：/api/v1/openapi.json',
+  'apiKeys.rotateDesc':
+    '「{label}」目前的金鑰將立即失效，請更新使用它的程式設定。',
   'cameras.desc': '連接到各裝置的 USB 攝影機。',
   'floorplan.desc': '店內的牆面，以及桌椅的配置。',
   'floorplan.walls': '牆面',

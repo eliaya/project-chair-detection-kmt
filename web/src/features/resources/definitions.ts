@@ -3,6 +3,7 @@ import { type I18n } from '@/i18n'
 import {
   adminCreateSchema,
   adminUpdateSchema,
+  apiKeySchema,
   cameraSchema,
   deviceSchema,
   type Health,
@@ -86,6 +87,28 @@ export const resources = {
     ],
     tokenRotation: true,
     refetchInterval: 5000,
+  },
+  apiKeys: {
+    key: 'api_keys',
+    title: 'nav.apiKeys',
+    item: 'field.apiKey',
+    description: 'apiKeys.desc',
+    fields: [
+      {
+        name: 'name',
+        label: 'field.name',
+        placeholder: 'apiKeys.namePlaceholder',
+      },
+    ],
+    createSchema: apiKeySchema,
+    columns: [
+      { key: 'id', title: 'field.id' },
+      { key: 'name', title: 'field.name' },
+      { key: 'created_at', title: 'field.createdAt', format: datetime },
+    ],
+    tokenRotation: true,
+    tokenDesc: 'apiKeys.tokenDesc',
+    rotateDesc: 'apiKeys.rotateDesc',
   },
   cameras: {
     key: 'cameras',

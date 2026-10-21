@@ -18,6 +18,7 @@ export const ja: Dict = {
   'nav.site': 'サイト',
   'nav.admins': '管理者',
   'nav.appearance': '外観',
+  'nav.apiKeys': 'API キー',
 
   'theme.toggle': 'テーマを切り替え',
   'theme.heading': 'テーマ',
@@ -73,6 +74,7 @@ export const ja: Dict = {
   'field.camera': 'カメラ',
   'field.zone': 'ゾーン',
   'field.createdAt': '作成日時',
+  'field.apiKey': 'API キー',
   'field.lastSeen': '最終通信',
   'field.devicePath': 'デバイスパス',
   'field.fps': 'FPS',
@@ -267,6 +269,13 @@ export const ja: Dict = {
   'devices.desc':
     'Raspberry Pi などのエッジ端末です。作成時に API トークンを発行します。',
   'devices.namePlaceholder': '店舗A 入口側',
+  'apiKeys.desc':
+    '外部プログラムが REST API（/api/v1）で稼働履歴を取得するためのキーです。仕様: /api/v1/openapi.json',
+  'apiKeys.namePlaceholder': 'POS 連携',
+  'apiKeys.tokenDesc':
+    'このキーは再表示できません。Authorization: Bearer <キー> で送信してください。仕様: /api/v1/openapi.json',
+  'apiKeys.rotateDesc':
+    '「{label}」の現在のキーはすぐに使えなくなります。利用しているプログラムの設定を更新してください。',
   'cameras.desc': '各デバイスに接続された USB カメラです。',
   'floorplan.desc': '店内の壁と、テーブル・椅子の配置です。',
   'floorplan.walls': '壁',

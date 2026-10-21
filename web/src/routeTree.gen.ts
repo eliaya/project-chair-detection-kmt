@@ -21,6 +21,7 @@ import { Route as Adminerrors503RouteImport } from './routes/admin/(errors)/503'
 import { Route as AdminAuthenticatedIndexRouteImport } from './routes/admin/_authenticated/index'
 import { Route as AdminAuthenticatedSettingsRouteRouteImport } from './routes/admin/_authenticated/settings/route'
 import { Route as AdminAuthenticatedAdminsIndexRouteImport } from './routes/admin/_authenticated/admins/index'
+import { Route as AdminAuthenticatedApiKeysIndexRouteImport } from './routes/admin/_authenticated/api-keys/index'
 import { Route as AdminAuthenticatedCamerasIndexRouteImport } from './routes/admin/_authenticated/cameras/index'
 import { Route as AdminAuthenticatedDevicesIndexRouteImport } from './routes/admin/_authenticated/devices/index'
 import { Route as AdminAuthenticatedErrorsErrorRouteImport } from './routes/admin/_authenticated/errors/$error'
@@ -92,6 +93,12 @@ const AdminAuthenticatedAdminsIndexRoute =
   AdminAuthenticatedAdminsIndexRouteImport.update({
     id: '/admins/',
     path: '/admins/',
+    getParentRoute: () => AdminAuthenticatedRouteRoute,
+  } as any)
+const AdminAuthenticatedApiKeysIndexRoute =
+  AdminAuthenticatedApiKeysIndexRouteImport.update({
+    id: '/api-keys/',
+    path: '/api-keys/',
     getParentRoute: () => AdminAuthenticatedRouteRoute,
   } as any)
 const AdminAuthenticatedCamerasIndexRoute =
@@ -170,6 +177,7 @@ export interface FileRoutesByFullPath {
   '/admin/errors/$error': typeof AdminAuthenticatedErrorsErrorRoute
   '/admin/settings/appearance': typeof AdminAuthenticatedSettingsAppearanceRoute
   '/admin/admins/': typeof AdminAuthenticatedAdminsIndexRoute
+  '/admin/api-keys/': typeof AdminAuthenticatedApiKeysIndexRoute
   '/admin/cameras/': typeof AdminAuthenticatedCamerasIndexRoute
   '/admin/devices/': typeof AdminAuthenticatedDevicesIndexRoute
   '/admin/floorplan/': typeof AdminAuthenticatedFloorplanIndexRoute
@@ -192,6 +200,7 @@ export interface FileRoutesByTo {
   '/admin/errors/$error': typeof AdminAuthenticatedErrorsErrorRoute
   '/admin/settings/appearance': typeof AdminAuthenticatedSettingsAppearanceRoute
   '/admin/admins': typeof AdminAuthenticatedAdminsIndexRoute
+  '/admin/api-keys': typeof AdminAuthenticatedApiKeysIndexRoute
   '/admin/cameras': typeof AdminAuthenticatedCamerasIndexRoute
   '/admin/devices': typeof AdminAuthenticatedDevicesIndexRoute
   '/admin/floorplan': typeof AdminAuthenticatedFloorplanIndexRoute
@@ -217,6 +226,7 @@ export interface FileRoutesById {
   '/admin/_authenticated/errors/$error': typeof AdminAuthenticatedErrorsErrorRoute
   '/admin/_authenticated/settings/appearance': typeof AdminAuthenticatedSettingsAppearanceRoute
   '/admin/_authenticated/admins/': typeof AdminAuthenticatedAdminsIndexRoute
+  '/admin/_authenticated/api-keys/': typeof AdminAuthenticatedApiKeysIndexRoute
   '/admin/_authenticated/cameras/': typeof AdminAuthenticatedCamerasIndexRoute
   '/admin/_authenticated/devices/': typeof AdminAuthenticatedDevicesIndexRoute
   '/admin/_authenticated/floorplan/': typeof AdminAuthenticatedFloorplanIndexRoute
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/admin/errors/$error'
     | '/admin/settings/appearance'
     | '/admin/admins/'
+    | '/admin/api-keys/'
     | '/admin/cameras/'
     | '/admin/devices/'
     | '/admin/floorplan/'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/admin/errors/$error'
     | '/admin/settings/appearance'
     | '/admin/admins'
+    | '/admin/api-keys'
     | '/admin/cameras'
     | '/admin/devices'
     | '/admin/floorplan'
@@ -289,6 +301,7 @@ export interface FileRouteTypes {
     | '/admin/_authenticated/errors/$error'
     | '/admin/_authenticated/settings/appearance'
     | '/admin/_authenticated/admins/'
+    | '/admin/_authenticated/api-keys/'
     | '/admin/_authenticated/cameras/'
     | '/admin/_authenticated/devices/'
     | '/admin/_authenticated/floorplan/'
@@ -397,6 +410,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAuthenticatedAdminsIndexRouteImport
       parentRoute: typeof AdminAuthenticatedRouteRoute
     }
+    '/admin/_authenticated/api-keys/': {
+      id: '/admin/_authenticated/api-keys/'
+      path: '/api-keys'
+      fullPath: '/admin/api-keys/'
+      preLoaderRoute: typeof AdminAuthenticatedApiKeysIndexRouteImport
+      parentRoute: typeof AdminAuthenticatedRouteRoute
+    }
     '/admin/_authenticated/cameras/': {
       id: '/admin/_authenticated/cameras/'
       path: '/cameras'
@@ -492,6 +512,7 @@ interface AdminAuthenticatedRouteRouteChildren {
   AdminAuthenticatedIndexRoute: typeof AdminAuthenticatedIndexRoute
   AdminAuthenticatedErrorsErrorRoute: typeof AdminAuthenticatedErrorsErrorRoute
   AdminAuthenticatedAdminsIndexRoute: typeof AdminAuthenticatedAdminsIndexRoute
+  AdminAuthenticatedApiKeysIndexRoute: typeof AdminAuthenticatedApiKeysIndexRoute
   AdminAuthenticatedCamerasIndexRoute: typeof AdminAuthenticatedCamerasIndexRoute
   AdminAuthenticatedDevicesIndexRoute: typeof AdminAuthenticatedDevicesIndexRoute
   AdminAuthenticatedFloorplanIndexRoute: typeof AdminAuthenticatedFloorplanIndexRoute
@@ -508,6 +529,7 @@ const AdminAuthenticatedRouteRouteChildren: AdminAuthenticatedRouteRouteChildren
     AdminAuthenticatedIndexRoute: AdminAuthenticatedIndexRoute,
     AdminAuthenticatedErrorsErrorRoute: AdminAuthenticatedErrorsErrorRoute,
     AdminAuthenticatedAdminsIndexRoute: AdminAuthenticatedAdminsIndexRoute,
+    AdminAuthenticatedApiKeysIndexRoute: AdminAuthenticatedApiKeysIndexRoute,
     AdminAuthenticatedCamerasIndexRoute: AdminAuthenticatedCamerasIndexRoute,
     AdminAuthenticatedDevicesIndexRoute: AdminAuthenticatedDevicesIndexRoute,
     AdminAuthenticatedFloorplanIndexRoute:

@@ -54,6 +54,30 @@ export function CameraBadge({ status }: { status: CameraStatus }) {
 const lastContact = (d: Device) =>
   [d.last_seen_at ?? '', d.config_fetched_at ?? ''].sort()[1]
 
+// Selectable text with a copy button (tokens, env lines).
+export function CopyBlock({ text }: { text: string }) {
+  const { t } = useI18n()
+  return (
+    <div className='flex items-start gap-2'>
+      <pre className='min-w-0 flex-1 rounded-md bg-muted p-3 font-mono text-xs break-all whitespace-pre-wrap select-all'>
+        {text}
+      </pre>
+      <Button
+        variant='outline'
+        size='icon'
+        aria-label={t('common.copy')}
+        onClick={() =>
+          navigator.clipboard
+            .writeText(text)
+            .then(() => toast.success(t('common.copied')))
+        }
+      >
+        <Copy />
+      </Button>
+    </div>
+  )
+}
+
 // Shown with a new or re-issued token: what to put on the Pi, then whether it connected.
 // "Connected" means the Pi made contact after the token was issued (Worker timestamps).
 export function DeviceConnection({
@@ -75,23 +99,7 @@ export function DeviceConnection({
 
   return (
     <div className='flex flex-col gap-3'>
-      <div className='flex items-start gap-2'>
-        <pre className='min-w-0 flex-1 rounded-md bg-muted p-3 font-mono text-xs break-all whitespace-pre-wrap select-all'>
-          {env}
-        </pre>
-        <Button
-          variant='outline'
-          size='icon'
-          aria-label={t('common.copy')}
-          onClick={() =>
-            navigator.clipboard
-              .writeText(env)
-              .then(() => toast.success(t('common.copied')))
-          }
-        >
-          <Copy />
-        </Button>
-      </div>
+      <CopyBlock text={env} />
       <div aria-live='polite' className='flex items-start gap-2 text-sm'>
         {!connected ? (
           <>
