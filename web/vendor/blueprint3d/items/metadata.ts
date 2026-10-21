@@ -17,5 +17,8 @@ export interface Metadata {
 
   /** Description of the item for AI understanding */
   description?: string
+
+  /** KMT: seat or table id the item stands for (portal colours it by occupancy). */
+  seat?: string
 }
 

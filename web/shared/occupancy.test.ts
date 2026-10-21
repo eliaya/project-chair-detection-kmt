@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { countPublic, publicTables, seatId } from './occupancy'
+import {
+  countPublic,
+  itemStates,
+  publicTables,
+  seatId,
+  tableState,
+} from './occupancy'
 import { type SeatStatus } from './schemas'
 
 const s = (name: string) => ({ name })
@@ -56,5 +62,42 @@ describe('countPublic', () => {
       used_seats: 1,
       unknown_seats: 1,
     })
+  })
+})
+
+describe('tableState', () => {
+  const t = (...states: ('empty' | 'used' | 'unknown')[]) =>
+    states.map((state) => ({ name: '', state }))
+  it('is used when any seat is used, empty only when all are empty', () => {
+    expect(tableState(t('empty', 'used', 'unknown'))).toBe('used')
+    expect(tableState(t('empty', 'empty'))).toBe('empty')
+    expect(tableState(t('empty', 'unknown'))).toBe('unknown')
+  })
+})
+
+describe('itemStates', () => {
+  it('colours items by their seat or table binding', () => {
+    const tables = publicTables(
+      zone,
+      new Map<string, SeatStatus>([
+        ['A_t00_s00', 'empty'],
+        ['A_t00_s01', 'empty'],
+        ['A_t01_s00', 'occupied'],
+      ]),
+      'ok'
+    )
+    expect(
+      itemStates(
+        [{ id: 'A', tables }],
+        [
+          { seat: 'A_t00' },
+          { seat: 'A_t00_s01' },
+          { seat: 'A_t01' },
+          { seat: 'A_t01_s01' },
+          { seat: 'A_t09' },
+          {},
+        ]
+      )
+    ).toEqual(['empty', 'empty', 'used', 'unknown', 'unknown', 'unknown'])
   })
 })

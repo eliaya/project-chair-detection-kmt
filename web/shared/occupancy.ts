@@ -7,8 +7,9 @@ export const trustedCameras: readonly string[] = ['ok', 'not_reported']
 
 const pad = (n: number) => String(n).padStart(2, '0')
 // main.py reports seat j of table i as "<zone id>_t<ii>_s<jj>".
+export const tableId = (zoneId: string, i: number) => `${zoneId}_t${pad(i)}`
 export const seatId = (zoneId: string, i: number, j: number) =>
-  `${zoneId}_t${pad(i)}_s${pad(j)}`
+  `${tableId(zoneId, i)}_s${pad(j)}`
 
 export type PublicSeat = { name: string; state: 'empty' | 'used' | 'unknown' }
 
@@ -43,4 +44,25 @@ export function countPublic(tables: PublicSeat[][]) {
     used_seats: n('used'),
     unknown_seats: n('unknown'),
   }
+}
+
+// One seat in use makes a table in use; it is vacant only when every seat is empty.
+export function tableState(table: PublicSeat[]): PublicSeat['state'] {
+  if (table.some((s) => s.state === 'used')) return 'used'
+  return table.every((s) => s.state === 'empty') ? 'empty' : 'unknown'
+}
+
+// State of each floor plan item from the seat or table it is bound to;
+// unbound items, and bindings to seats that no longer exist, are unknown.
+export function itemStates(
+  zones: { id: string; tables: PublicSeat[][] }[],
+  items: { seat?: string }[]
+): PublicSeat['state'][] {
+  const states = new Map<string, PublicSeat['state']>()
+  for (const z of zones)
+    z.tables.forEach((table, i) => {
+      states.set(tableId(z.id, i), tableState(table))
+      table.forEach((s, j) => states.set(seatId(z.id, i, j), s.state))
+    })
+  return items.map((item) => (item.seat && states.get(item.seat)) || 'unknown')
 }

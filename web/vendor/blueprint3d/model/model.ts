@@ -18,6 +18,7 @@ export interface SerializedItem {
   fixed: boolean
   resizable?: boolean
   description?: string // Description for AI understanding
+  seat?: string // KMT: see Metadata.seat
 }
 
 /**
@@ -82,7 +83,8 @@ export class Model {
         scale_z: object.scale.z,
         fixed: object.fixed,
         resizable: metadata.resizable,
-        description: metadata.description
+        description: metadata.description,
+        seat: metadata.seat
       }
     }
 
@@ -104,7 +106,8 @@ export class Model {
         resizable: item.resizable,
         itemType: item.item_type,
         modelUrl: item.model_url,
-        description: item.description
+        description: item.description,
+        seat: item.seat
       }
       const scale = new THREE.Vector3(item.scale_x, item.scale_y, item.scale_z)
       this.scene.addItem(

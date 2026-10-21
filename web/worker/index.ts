@@ -15,7 +15,12 @@ import {
   thresholdsSchema,
   zoneSchema,
 } from '../shared/schemas'
-import { countPublic, publicTables, trustedCameras } from '../shared/occupancy'
+import {
+  countPublic,
+  itemStates,
+  publicTables,
+  trustedCameras,
+} from '../shared/occupancy'
 import {
   DUMMY_HASH,
   hashPassword,
@@ -441,34 +446,60 @@ async function floorplan(req: Request, env: Env) {
 // Public portal: counts and per-camera seat states only; no zone, camera or
 // device ids, and no health details.
 async function publicOccupancy(env: Env) {
-  const [zones, seats, cams, site] = await env.DB.batch<Record<string, string>>([
+  const [zones, seats, cams, site, plan] = await env.DB.batch<
+    Record<string, string>
+  >([
     env.DB.prepare('SELECT id, camera_id, seats FROM zones ORDER BY id'),
     env.DB.prepare('SELECT seat_id, status FROM seat_state'),
     env.DB.prepare('SELECT id, device_id FROM cameras ORDER BY id'),
     env.DB.prepare("SELECT value FROM settings WHERE key = 'site_name'"),
+    env.DB.prepare("SELECT value FROM settings WHERE key = 'floorplan'"),
   ])
   const devs = await devicesById(env)
   const now = Date.now()
   const seatStatus = new Map(
     seats.results.map((s) => [s.seat_id, s.status as SeatStatus])
   )
-  const cameras = cams.results.map((c) => {
-    const status = cameraStatus(c.id, devs.get(c.device_id), now)
-    return {
-      live: trustedCameras.includes(status),
-      tables: zones.results
-        .filter((z) => z.camera_id === c.id)
-        .flatMap((z) =>
-          publicTables({ id: z.id, seats: JSON.parse(z.seats) }, seatStatus, status)
-        ),
-    }
-  })
+  const camStatus = new Map(
+    cams.results.map((c) => [c.id, cameraStatus(c.id, devs.get(c.device_id), now)])
+  )
+  const zoneTables = zones.results.map((z) => ({
+    id: z.id,
+    camera_id: z.camera_id,
+    tables: publicTables(
+      { id: z.id, seats: JSON.parse(z.seats) },
+      seatStatus,
+      camStatus.get(z.camera_id)
+    ),
+  }))
+  const cameras = cams.results.map((c) => ({
+    live: trustedCameras.includes(camStatus.get(c.id)!),
+    tables: zoneTables
+      .filter((z) => z.camera_id === c.id)
+      .flatMap((z) => z.tables),
+  }))
   const v = site.results[0]?.value
+  const p = plan.results[0]?.value
   return json({
     now: new Date(now).toISOString(),
     site_name: v ? JSON.parse(v) : null,
     ...countPublic(cameras.flatMap((c) => c.tables)),
     cameras,
+    // In the order of the items of GET /api/public/floorplan.
+    floorplan: p ? itemStates(zoneTables, JSON.parse(p).items) : [],
+  })
+}
+
+// The stored plan without its seat bindings, which name zones.
+async function publicFloorplan(env: Env) {
+  const v = await env.DB.prepare(
+    "SELECT value FROM settings WHERE key = 'floorplan'"
+  ).first<string>('value')
+  if (!v) return json(null)
+  const plan = JSON.parse(v) as z.infer<typeof floorplanSchema>
+  return json({
+    ...plan,
+    items: plan.items.map(({ seat: _, ...item }) => item),
   })
 }
 
@@ -604,6 +635,8 @@ async function route(req: Request, env: Env) {
   if (res === 'setup' && !id) return setup(req, env)
   if (res === 'public' && id === 'occupancy' && !action && req.method === 'GET')
     return publicOccupancy(env)
+  if (res === 'public' && id === 'floorplan' && !action && req.method === 'GET')
+    return publicFloorplan(env)
 
   const me = await requireAdmin(req, env)
   if (res === 'admins' && !action) return admins(req, env, me, id)

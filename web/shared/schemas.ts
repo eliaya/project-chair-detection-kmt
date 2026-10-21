@@ -102,6 +102,11 @@ export const floorplanSchema = z.object({
         scale_z: z.number().finite().min(0.01).max(100),
         fixed: z.boolean(),
         resizable: z.boolean().optional(),
+        // Seat ("<zone>_t<ii>_s<jj>") or table ("<zone>_t<ii>") the item stands for.
+        seat: z
+          .string()
+          .regex(/^[A-Za-z0-9_-]{1,32}_t\d{2}(_s\d{2})?$/)
+          .optional(),
       })
     )
     .max(1000),
