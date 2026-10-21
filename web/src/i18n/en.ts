@@ -221,6 +221,7 @@ export const en = {
   'portal.cameraOffline': 'Offline',
   'portal.noSeats': 'No seats assigned to this camera',
   'portal.noFloorplan': 'No floor plan yet',
+  'portal.zoneLabel': '{zone} · {n} vacant',
 
   'history.desc': 'Table status changes (latest 500)',
   'history.time': 'Time',
@@ -288,6 +289,8 @@ export const en = {
   'floorplan.hint.erase': 'Click a wall or corner to delete it.',
   'floorplan.hint.layout':
     'Drag furniture to move it; drag the arrows on a selected item to rotate it. Drag the background to turn the view, scroll to zoom.',
+  'floorplan.hint.zones':
+    'Each zone is framed around the furniture linked to its seats and tables; colours are live.',
   'floorplan.table2': '2-person table',
   'floorplan.table4': '4-person table',
   'floorplan.table6': '6-person table',

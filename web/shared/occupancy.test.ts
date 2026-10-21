@@ -5,6 +5,7 @@ import {
   publicTables,
   seatId,
   tableState,
+  zoneOf,
 } from './occupancy'
 import { type SeatStatus } from './schemas'
 
@@ -99,5 +100,12 @@ describe('itemStates', () => {
         ]
       )
     ).toEqual(['empty', 'empty', 'used', 'unknown', 'unknown', 'unknown'])
+  })
+})
+
+describe('zoneOf', () => {
+  it('strips the table and seat suffix', () => {
+    expect(zoneOf('zone_A_t03_s12')).toBe('zone_A')
+    expect(zoneOf('zone_t1_t03')).toBe('zone_t1')
   })
 })

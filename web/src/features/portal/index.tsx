@@ -13,6 +13,7 @@ type PublicOccupancy = {
   used_seats: number
   unknown_seats: number
   cameras: { live: boolean; tables: PublicSeat[][] }[]
+  zones: { id: string; empty_seats: number }[]
   floorplan: PublicSeat['state'][]
 }
 
@@ -165,9 +166,12 @@ export function Portal() {
           </TabsContent>
           <TabsContent
             value='floorplan'
-            className='min-h-[min(70svh,48rem)] overflow-hidden rounded-2xl border bg-card lg:min-h-0'
+            className='overflow-hidden rounded-2xl border bg-card p-2'
           >
-            <FloorplanTab states={data?.floorplan ?? []} />
+            <FloorplanTab
+              states={data?.floorplan ?? []}
+              zones={data?.zones ?? []}
+            />
           </TabsContent>
         </Tabs>
 

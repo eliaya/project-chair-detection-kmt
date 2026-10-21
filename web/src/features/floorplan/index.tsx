@@ -25,9 +25,21 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { FloorplanMap } from '@/components/floorplan-map'
 import { PageShell } from '@/components/layout/page-shell'
-import { seatId, tableId } from '../../../shared/occupancy'
-import { type zoneSchema } from '../../../shared/schemas'
+import {
+  countPublic,
+  itemStates,
+  publicTables,
+  seatId,
+  tableId,
+  zoneOf,
+} from '../../../shared/occupancy'
+import {
+  type floorplanSchema,
+  type SeatStatus,
+  type zoneSchema,
+} from '../../../shared/schemas'
 import { Floorplanner } from '../../../vendor/blueprint3d/floorplanner/floorplanner'
 import { floorplannerModes } from '../../../vendor/blueprint3d/floorplanner/floorplanner_view'
 import type { Item } from '../../../vendor/blueprint3d/items/item'
@@ -66,6 +78,11 @@ type WallMode = keyof typeof wallModes
 
 type Planner = { model: Model; three: ThreeMain; floorplanner: Floorplanner }
 type Zone = z.infer<typeof zoneSchema>
+type Plan = z.infer<typeof floorplanSchema>
+type Current = {
+  seats: { seat_id: string; status: SeatStatus }[]
+  cameras: { id: string; status: string }[]
+}
 
 // Chairs and stools stand for a seat, tables for a table; the portal colours them.
 const binds: Record<string, 'seat' | 'table'> = {
@@ -89,12 +106,20 @@ export function FloorplanPage() {
   const wallsHost = useRef<HTMLDivElement>(null)
   const layoutHost = useRef<HTMLDivElement>(null)
   const planner = useRef<Planner | null>(null)
-  const [tab, setTab] = useState<'walls' | 'layout'>('walls')
+  const [tab, setTab] = useState<'walls' | 'layout' | 'zones'>('walls')
+  // The editor's plan, unsaved changes included, as of opening the zones tab.
+  const [snapshot, setSnapshot] = useState<Plan>()
   const [wallMode, setWallMode] = useState<WallMode>('move')
   const [camera, setCamera] = useState<'2d' | '3d'>('3d')
   const [selected, setSelected] = useState<Item | null>(null)
   const [seat, setSeat] = useState<string>()
   const zones = useQuery(listQuery<Zone>('zones'))
+  const current = useQuery({
+    queryKey: ['occupancy', 'current'],
+    queryFn: () => api.get<Current>('/occupancy/current').then((r) => r.data),
+    refetchInterval: 5000,
+    enabled: tab === 'zones',
+  })
 
   useEffect(() => {
     if (!plan.isSuccess || !wallsHost.current || !layoutHost.current) return
@@ -170,6 +195,25 @@ export function FloorplanPage() {
     selected.metadata.seat = v === 'none' ? undefined : v
     setSeat(selected.metadata.seat)
   }
+  const changeTab = (v: string) => {
+    if (v === 'zones' && planner.current)
+      setSnapshot(JSON.parse(planner.current.model.exportSerialized()))
+    setTab(v as typeof tab)
+  }
+  const seatStatus = new Map(
+    current.data?.seats.map((s) => [s.seat_id, s.status])
+  )
+  const cameraStatus = new Map(
+    current.data?.cameras.map((c) => [c.id, c.status])
+  )
+  const zoneTables = (zones.data ?? []).map((zone) => ({
+    id: zone.id,
+    tables: publicTables(zone, seatStatus, cameraStatus.get(zone.camera_id)),
+  }))
+  const emptySeats = new Map(
+    zoneTables.map((z) => [z.id, countPublic(z.tables).empty_seats])
+  )
+
   const bindKind = selected && binds[selected.metadata.modelUrl ?? '']
   const remove = () => {
     if (!selected) return
@@ -191,10 +235,11 @@ export function FloorplanPage() {
       }
     >
       <div className='flex flex-wrap items-center gap-2'>
-        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+        <Tabs value={tab} onValueChange={changeTab}>
           <TabsList>
             <TabsTrigger value='walls'>{t('floorplan.walls')}</TabsTrigger>
             <TabsTrigger value='layout'>{t('floorplan.layout')}</TabsTrigger>
+            <TabsTrigger value='zones'>{t('nav.zones')}</TabsTrigger>
           </TabsList>
         </Tabs>
         {tab === 'walls' ? (
@@ -213,88 +258,92 @@ export function FloorplanPage() {
             ))}
           </ToggleGroup>
         ) : (
-          <>
-            <ToggleGroup
-              type='single'
-              variant='outline'
-              value={camera}
-              onValueChange={changeCamera}
-              aria-label={t('floorplan.camera')}
-            >
-              <ToggleGroupItem value='2d' className='px-3'>
-                {t('floorplan.top')}
-              </ToggleGroupItem>
-              <ToggleGroupItem value='3d' className='px-3'>
-                {t('floorplan.angle')}
-              </ToggleGroupItem>
-            </ToggleGroup>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant='outline'>
-                  <Plus />
-                  {t('floorplan.add')}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='start'>
-                {Object.entries(furniture).map(([kind, f]) => (
-                  <DropdownMenuItem
-                    key={kind}
-                    onSelect={() => add(kind as FurnitureKind)}
-                  >
-                    {t(f.label)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant='outline' disabled={!selected} onClick={remove}>
-              <Trash2 />
-              {t('floorplan.delete')}
-            </Button>
-            {bindKind && (
-              <Select value={seat ?? 'none'} onValueChange={bind}>
-                <SelectTrigger
-                  className='min-w-40'
-                  aria-label={t(`floorplan.${bindKind}`)}
-                >
-                  <span className='text-muted-foreground'>
-                    {t(`floorplan.${bindKind}`)}
-                  </span>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='none'>{t('floorplan.unbound')}</SelectItem>
-                  {zones.data?.map((zone) => (
-                    <SelectGroup key={zone.id}>
-                      <SelectLabel>{zone.id}</SelectLabel>
-                      {zone.seats.flatMap((seats, i) =>
-                        bindKind === 'table' ? (
-                          <SelectItem key={i} value={tableId(zone.id, i)}>
-                            {seats.map((s) => s.name).join(' · ')}
-                          </SelectItem>
-                        ) : (
-                          seats.map((s, j) => (
-                            <SelectItem
-                              key={`${i}-${j}`}
-                              value={seatId(zone.id, i, j)}
-                            >
-                              {s.name}
-                            </SelectItem>
-                          ))
-                        )
-                      )}
-                    </SelectGroup>
+          tab === 'layout' && (
+            <>
+              <ToggleGroup
+                type='single'
+                variant='outline'
+                value={camera}
+                onValueChange={changeCamera}
+                aria-label={t('floorplan.camera')}
+              >
+                <ToggleGroupItem value='2d' className='px-3'>
+                  {t('floorplan.top')}
+                </ToggleGroupItem>
+                <ToggleGroupItem value='3d' className='px-3'>
+                  {t('floorplan.angle')}
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant='outline'>
+                    <Plus />
+                    {t('floorplan.add')}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='start'>
+                  {Object.entries(furniture).map(([kind, f]) => (
+                    <DropdownMenuItem
+                      key={kind}
+                      onSelect={() => add(kind as FurnitureKind)}
+                    >
+                      {t(f.label)}
+                    </DropdownMenuItem>
                   ))}
-                </SelectContent>
-              </Select>
-            )}
-          </>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant='outline' disabled={!selected} onClick={remove}>
+                <Trash2 />
+                {t('floorplan.delete')}
+              </Button>
+              {bindKind && (
+                <Select value={seat ?? 'none'} onValueChange={bind}>
+                  <SelectTrigger
+                    className='min-w-40'
+                    aria-label={t(`floorplan.${bindKind}`)}
+                  >
+                    <span className='text-muted-foreground'>
+                      {t(`floorplan.${bindKind}`)}
+                    </span>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='none'>
+                      {t('floorplan.unbound')}
+                    </SelectItem>
+                    {zones.data?.map((zone) => (
+                      <SelectGroup key={zone.id}>
+                        <SelectLabel>{zone.id}</SelectLabel>
+                        {zone.seats.flatMap((seats, i) =>
+                          bindKind === 'table' ? (
+                            <SelectItem key={i} value={tableId(zone.id, i)}>
+                              {seats.map((s) => s.name).join(' · ')}
+                            </SelectItem>
+                          ) : (
+                            seats.map((s, j) => (
+                              <SelectItem
+                                key={`${i}-${j}`}
+                                value={seatId(zone.id, i, j)}
+                              >
+                                {s.name}
+                              </SelectItem>
+                            ))
+                          )
+                        )}
+                      </SelectGroup>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </>
+          )
         )}
       </div>
       <p className='text-sm text-muted-foreground'>
         {t(
           tab === 'walls'
             ? `floorplan.hint.${wallMode}`
-            : 'floorplan.hint.layout'
+            : `floorplan.hint.${tab}`
         )}
       </p>
       <Card className='relative h-[calc(100svh-18rem)] min-h-96 overflow-hidden p-0'>
@@ -306,6 +355,23 @@ export function FloorplanPage() {
           ref={layoutHost}
           className={cn('absolute inset-0', tab !== 'layout' && 'hidden')}
         />
+        {tab === 'zones' && snapshot && (
+          <div className='absolute inset-0 p-4'>
+            <FloorplanMap
+              plan={{
+                ...snapshot,
+                items: snapshot.items.map((item) => ({
+                  ...item,
+                  zone: item.seat && zoneOf(item.seat),
+                })),
+              }}
+              states={itemStates(zoneTables, snapshot.items)}
+              zoneLabel={(zone) =>
+                t('portal.zoneLabel', { zone, n: emptySeats.get(zone) ?? 0 })
+              }
+            />
+          </div>
+        )}
       </Card>
     </PageShell>
   )

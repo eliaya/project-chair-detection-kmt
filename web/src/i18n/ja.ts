@@ -216,6 +216,7 @@ export const ja: Dict = {
   'portal.cameraOffline': 'オフライン',
   'portal.noSeats': 'このカメラには座席がありません',
   'portal.noFloorplan': '平面図はまだありません',
+  'portal.zoneLabel': '{zone} · 空席 {n}',
 
   'history.desc': '卓の状態が変化した記録（最新500件）',
   'history.time': '日時',
@@ -284,6 +285,8 @@ export const ja: Dict = {
   'floorplan.hint.erase': '壁や角をクリックして削除します。',
   'floorplan.hint.layout':
     '家具はドラッグで移動、選択中の矢印をドラッグで回転します。背景のドラッグで視点を回し、スクロールで拡大・縮小します。',
+  'floorplan.hint.zones':
+    '各ゾーンは、その座席・テーブルに対応付けた家具を囲んで表示します。色はリアルタイムの状態です。',
   'floorplan.table2': '2人卓',
   'floorplan.table4': '4人卓',
   'floorplan.table6': '6人卓',

@@ -20,6 +20,7 @@ import {
   itemStates,
   publicTables,
   trustedCameras,
+  zoneOf,
 } from '../shared/occupancy'
 import {
   DUMMY_HASH,
@@ -485,12 +486,13 @@ async function publicOccupancy(env: Env) {
     site_name: v ? JSON.parse(v) : null,
     ...countPublic(cameras.flatMap((c) => c.tables)),
     cameras,
+    zones: zoneTables.map((z) => ({ id: z.id, ...countPublic(z.tables) })),
     // In the order of the items of GET /api/public/floorplan.
     floorplan: p ? itemStates(zoneTables, JSON.parse(p).items) : [],
   })
 }
 
-// The stored plan without its seat bindings, which name zones.
+// The stored plan with each seat or table binding reduced to its zone.
 async function publicFloorplan(env: Env) {
   const v = await env.DB.prepare(
     "SELECT value FROM settings WHERE key = 'floorplan'"
@@ -499,7 +501,10 @@ async function publicFloorplan(env: Env) {
   const plan = JSON.parse(v) as z.infer<typeof floorplanSchema>
   return json({
     ...plan,
-    items: plan.items.map(({ seat: _, ...item }) => item),
+    items: plan.items.map(({ seat, ...item }) => ({
+      ...item,
+      zone: seat && zoneOf(seat),
+    })),
   })
 }
 

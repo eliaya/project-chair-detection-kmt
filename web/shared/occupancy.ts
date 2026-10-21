@@ -10,6 +10,8 @@ const pad = (n: number) => String(n).padStart(2, '0')
 export const tableId = (zoneId: string, i: number) => `${zoneId}_t${pad(i)}`
 export const seatId = (zoneId: string, i: number, j: number) =>
   `${tableId(zoneId, i)}_s${pad(j)}`
+// Zone id of a seat or table id.
+export const zoneOf = (id: string) => id.replace(/_t\d{2}(_s\d{2})?$/, '')
 
 export type PublicSeat = { name: string; state: 'empty' | 'used' | 'unknown' }
 

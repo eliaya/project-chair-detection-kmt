@@ -210,6 +210,7 @@ export const zhCN: Dict = {
   'portal.cameraOffline': '离线',
   'portal.noSeats': '此摄像头没有设置座位',
   'portal.noFloorplan': '尚未创建平面图',
+  'portal.zoneLabel': '{zone} · 空位 {n}',
 
   'history.desc': '桌位状态变化记录（最新 500 条）',
   'history.time': '时间',
@@ -275,6 +276,8 @@ export const zhCN: Dict = {
   'floorplan.hint.erase': '点击墙面或墙角即可删除。',
   'floorplan.hint.layout':
     '拖动家具即可移动；拖动选中家具的箭头即可旋转。拖动背景可转动视角，滚动鼠标可缩放。',
+  'floorplan.hint.zones':
+    '各区域以绑定到该区域座位与桌的家具为范围框出；颜色为实时状态。',
   'floorplan.table2': '2人桌',
   'floorplan.table4': '4人桌',
   'floorplan.table6': '6人桌',

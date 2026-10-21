@@ -210,6 +210,7 @@ export const zhTW: Dict = {
   'portal.cameraOffline': '離線',
   'portal.noSeats': '此攝影機沒有設定座位',
   'portal.noFloorplan': '尚未建立平面圖',
+  'portal.zoneLabel': '{zone} · 空位 {n}',
 
   'history.desc': '桌位狀態變化紀錄（最新 500 筆）',
   'history.time': '時間',
@@ -275,6 +276,8 @@ export const zhTW: Dict = {
   'floorplan.hint.erase': '點擊牆面或牆角即可刪除。',
   'floorplan.hint.layout':
     '拖曳家具即可移動；拖曳選取中家具的箭頭即可旋轉。拖曳背景可轉動視角，捲動滑鼠可縮放。',
+  'floorplan.hint.zones':
+    '各區域以綁定到該區域座位與桌的家具為範圍框出；顏色為即時狀態。',
   'floorplan.table2': '2人桌',
   'floorplan.table4': '4人桌',
   'floorplan.table6': '6人桌',
