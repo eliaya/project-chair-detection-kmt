@@ -215,6 +215,12 @@ export const en = {
   'portal.unknown': '{n} seats are not reporting',
   'portal.offline': 'Connection lost. Showing the last data.',
   'portal.updated': 'Updated {time}',
+  'portal.title': 'Live seat availability',
+  'portal.cameras': 'Cameras',
+  'portal.camera': 'Camera {n}',
+  'portal.live': 'Live',
+  'portal.cameraOffline': 'Offline',
+  'portal.noSeats': 'No seats assigned to this camera',
 
   'history.desc': 'Table status changes (latest 500)',
   'history.time': 'Time',

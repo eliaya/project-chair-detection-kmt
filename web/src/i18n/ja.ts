@@ -210,6 +210,12 @@ export const ja: Dict = {
   'portal.unknown': '{n}席は計測できていません',
   'portal.offline': '接続が切れています。最後のデータを表示しています。',
   'portal.updated': '{time} 更新',
+  'portal.title': 'リアルタイム空席状況',
+  'portal.cameras': 'カメラ',
+  'portal.camera': 'カメラ {n}',
+  'portal.live': 'ライブ',
+  'portal.cameraOffline': 'オフライン',
+  'portal.noSeats': 'このカメラには座席がありません',
 
   'history.desc': '卓の状態が変化した記録（最新500件）',
   'history.time': '日時',

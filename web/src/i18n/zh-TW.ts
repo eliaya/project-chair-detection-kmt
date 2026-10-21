@@ -204,6 +204,12 @@ export const zhTW: Dict = {
   'portal.unknown': '{n} 個座位未回報',
   'portal.offline': '連線中斷，顯示最後的資料。',
   'portal.updated': '更新於 {time}',
+  'portal.title': '即時空位狀況',
+  'portal.cameras': '攝影機',
+  'portal.camera': '攝影機 {n}',
+  'portal.live': '即時',
+  'portal.cameraOffline': '離線',
+  'portal.noSeats': '此攝影機沒有設定座位',
 
   'history.desc': '桌位狀態變化紀錄（最新 500 筆）',
   'history.time': '時間',

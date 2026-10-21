@@ -15,7 +15,7 @@ import {
   thresholdsSchema,
   zoneSchema,
 } from '../shared/schemas'
-import { countPublic } from '../shared/occupancy'
+import { countPublic, publicTables, trustedCameras } from '../shared/occupancy'
 import {
   DUMMY_HASH,
   hashPassword,
@@ -438,32 +438,37 @@ async function floorplan(req: Request, env: Env) {
   throw new HttpError(404, 'Not Found')
 }
 
-// Public portal: aggregate counts only, no zone, camera or device ids.
+// Public portal: counts and per-camera seat states only; no zone, camera or
+// device ids, and no health details.
 async function publicOccupancy(env: Env) {
   const [zones, seats, cams, site] = await env.DB.batch<Record<string, string>>([
     env.DB.prepare('SELECT id, camera_id, seats FROM zones ORDER BY id'),
     env.DB.prepare('SELECT seat_id, status FROM seat_state'),
-    env.DB.prepare('SELECT id, device_id FROM cameras'),
+    env.DB.prepare('SELECT id, device_id FROM cameras ORDER BY id'),
     env.DB.prepare("SELECT value FROM settings WHERE key = 'site_name'"),
   ])
   const devs = await devicesById(env)
   const now = Date.now()
-  const counts = countPublic(
-    zones.results.map((z) => ({
-      id: z.id,
-      camera_id: z.camera_id,
-      seats: JSON.parse(z.seats),
-    })),
-    new Map(seats.results.map((s) => [s.seat_id, s.status as SeatStatus])),
-    new Map(
-      cams.results.map((c) => [c.id, cameraStatus(c.id, devs.get(c.device_id), now)])
-    )
+  const seatStatus = new Map(
+    seats.results.map((s) => [s.seat_id, s.status as SeatStatus])
   )
+  const cameras = cams.results.map((c) => {
+    const status = cameraStatus(c.id, devs.get(c.device_id), now)
+    return {
+      live: trustedCameras.includes(status),
+      tables: zones.results
+        .filter((z) => z.camera_id === c.id)
+        .flatMap((z) =>
+          publicTables({ id: z.id, seats: JSON.parse(z.seats) }, seatStatus, status)
+        ),
+    }
+  })
   const v = site.results[0]?.value
   return json({
     now: new Date(now).toISOString(),
     site_name: v ? JSON.parse(v) : null,
-    ...counts,
+    ...countPublic(cameras.flatMap((c) => c.tables)),
+    cameras,
   })
 }
 

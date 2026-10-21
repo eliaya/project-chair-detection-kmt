@@ -204,6 +204,12 @@ export const zhCN: Dict = {
   'portal.unknown': '{n} 个座位未回报',
   'portal.offline': '连接中断，显示最后的数据。',
   'portal.updated': '更新于 {time}',
+  'portal.title': '实时空位状况',
+  'portal.cameras': '摄像头',
+  'portal.camera': '摄像头 {n}',
+  'portal.live': '实时',
+  'portal.cameraOffline': '离线',
+  'portal.noSeats': '此摄像头没有设置座位',
 
   'history.desc': '桌位状态变化记录（最新 500 条）',
   'history.time': '时间',

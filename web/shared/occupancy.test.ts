@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { countPublic, seatId } from './occupancy'
+import { countPublic, publicTables, seatId } from './occupancy'
 import { type SeatStatus } from './schemas'
 
-const seat = { name: 'A', vertices: [] }
-// Zone A: table 0 has 2 seats, table 1 has 2 seats. Zone B: one 1-seat table.
-const zones = [
-  { id: 'A', camera_id: 'cam1', seats: [[seat, seat], [seat, seat]] },
-  { id: 'B', camera_id: 'cam2', seats: [[seat]] },
-]
+const s = (name: string) => ({ name })
+// Table 0 has seats A1, A2; table 1 has B1, B2.
+const zone = { id: 'A', seats: [[s('A1'), s('A2')], [s('B1'), s('B2')]] }
 
 describe('seatId', () => {
   it('matches main.py _sid', () => {
@@ -15,50 +12,49 @@ describe('seatId', () => {
   })
 })
 
+describe('publicTables', () => {
+  const seats = new Map<string, SeatStatus>([
+    ['A_t00_s00', 'empty'],
+    ['A_t00_s01', 'occupied'],
+    ['A_t01_s00', 'confirming'],
+    // A_t01_s01 has no row yet; A_t05_s00 is left behind by a shrunk zone.
+    ['A_t05_s00', 'occupied'],
+  ])
+
+  it('maps seat states for a trusted camera', () => {
+    expect(publicTables(zone, seats, 'ok')).toEqual([
+      [
+        { name: 'A1', state: 'empty' },
+        { name: 'A2', state: 'used' },
+      ],
+      [
+        { name: 'B1', state: 'used' },
+        { name: 'B2', state: 'unknown' },
+      ],
+    ])
+  })
+
+  it('makes every seat unknown when the camera is not trusted', () => {
+    for (const status of ['read_failed', 'offline', undefined])
+      expect(
+        publicTables(zone, seats, status)
+          .flat()
+          .every((seat) => seat.state === 'unknown')
+      ).toBe(true)
+  })
+})
+
 describe('countPublic', () => {
-  it('counts empty tables, empty seats and seats in use', () => {
-    const seats = new Map<string, SeatStatus>([
-      ['A_t00_s00', 'empty'],
-      ['A_t00_s01', 'empty'],
-      ['A_t01_s00', 'empty'],
-      ['A_t01_s01', 'confirming'],
-      ['B_t00_s00', 'leave_confirm'],
-    ])
-    const cams = new Map([
-      ['cam1', 'ok'],
-      ['cam2', 'not_reported'],
-    ])
-    expect(countPublic(zones, seats, cams)).toEqual({
-      empty_tables: 1,
-      empty_seats: 3,
-      used_seats: 2,
-      unknown_seats: 0,
-    })
-  })
-
-  it('treats seats of an untrusted camera or without a row as unknown', () => {
-    const seats = new Map<string, SeatStatus>([
-      ['A_t00_s00', 'empty'],
-      ['A_t00_s01', 'empty'],
-      ['A_t01_s00', 'empty'],
-      ['B_t00_s00', 'occupied'],
-    ])
-    // cam2 is missing: its device is offline.
-    const cams = new Map([['cam1', 'ok']])
-    expect(countPublic(zones, seats, cams)).toEqual({
-      empty_tables: 1,
-      empty_seats: 3,
-      used_seats: 0,
-      unknown_seats: 2,
-    })
+  it('counts vacant tables, vacant seats and seats in use', () => {
+    const t = (...states: ('empty' | 'used' | 'unknown')[]) =>
+      states.map((state) => ({ name: '', state }))
     expect(
-      countPublic(zones, seats, new Map([['cam1', 'read_failed']])).unknown_seats
-    ).toBe(5)
-  })
-
-  it('ignores seat rows left behind by a shrunk zone', () => {
-    const seats = new Map<string, SeatStatus>([['A_t05_s00', 'occupied']])
-    const cams = new Map([['cam1', 'ok']])
-    expect(countPublic(zones.slice(0, 1), seats, cams).used_seats).toBe(0)
+      countPublic([t('empty', 'empty'), t('empty', 'used'), t('unknown'), t('empty')])
+    ).toEqual({
+      empty_tables: 2,
+      empty_seats: 4,
+      used_seats: 1,
+      unknown_seats: 1,
+    })
   })
 })

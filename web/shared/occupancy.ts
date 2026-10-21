@@ -10,27 +10,37 @@ const pad = (n: number) => String(n).padStart(2, '0')
 export const seatId = (zoneId: string, i: number, j: number) =>
   `${zoneId}_t${pad(i)}_s${pad(j)}`
 
-// Public counts: a table is vacant only when every seat is empty; a seat someone
-// is sitting down at (confirming) is not offered as free. Unknown seats count in neither.
-export function countPublic(
-  zones: { id: string; camera_id: string; seats: unknown[][] }[],
+export type PublicSeat = { name: string; state: 'empty' | 'used' | 'unknown' }
+
+// Public view of one zone's tables: a seat someone is sitting down at (confirming)
+// is not offered as free; an untrusted camera or a missing row makes a seat unknown.
+export function publicTables(
+  zone: { id: string; seats: { name: string }[][] },
   seatStatus: Map<string, SeatStatus>,
-  cameraStatus: Map<string, string>
-) {
-  const c = { empty_tables: 0, empty_seats: 0, used_seats: 0, unknown_seats: 0 }
-  for (const zone of zones) {
-    const trusted = trustedCameras.includes(cameraStatus.get(zone.camera_id) ?? 'offline')
-    zone.seats.forEach((table, i) => {
-      let allEmpty = true
-      table.forEach((_, j) => {
-        const s = trusted ? seatStatus.get(seatId(zone.id, i, j)) : undefined
-        if (s === 'empty') c.empty_seats++
-        else if (s) c.used_seats++
-        else c.unknown_seats++
-        allEmpty &&= s === 'empty'
-      })
-      if (allEmpty) c.empty_tables++
+  cameraStatus: string | undefined
+): PublicSeat[][] {
+  const trusted = trustedCameras.includes(cameraStatus ?? 'offline')
+  return zone.seats.map((table, i) =>
+    table.map((seat, j) => {
+      const s = trusted ? seatStatus.get(seatId(zone.id, i, j)) : undefined
+      return {
+        name: seat.name,
+        state: !s ? 'unknown' : s === 'empty' ? 'empty' : 'used',
+      }
     })
+  )
+}
+
+// A table is vacant only when every seat is empty. Unknown seats count in neither.
+export function countPublic(tables: PublicSeat[][]) {
+  const seats = tables.flat()
+  const n = (state: PublicSeat['state']) =>
+    seats.filter((s) => s.state === state).length
+  return {
+    empty_tables: tables.filter((t) => t.every((s) => s.state === 'empty'))
+      .length,
+    empty_seats: n('empty'),
+    used_seats: n('used'),
+    unknown_seats: n('unknown'),
   }
-  return c
 }
