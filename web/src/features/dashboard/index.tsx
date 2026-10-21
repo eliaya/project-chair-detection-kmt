@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/card'
 import { PageShell } from '@/components/layout/page-shell'
 import { type CameraStatus } from '@/features/resources/connection'
+import { seatId, trustedCameras } from '../../../shared/occupancy'
 import { type SeatStatus, type zoneSchema } from '../../../shared/schemas'
 
 type Zone = z.infer<typeof zoneSchema>
@@ -29,10 +30,6 @@ type Current = {
   // Judged by the Worker: Pi offline (90 s) or camera failure.
   cameras: { id: string; status: CameraStatus }[]
 }
-
-// Seats are only trusted while their camera works; "not_reported" means main.py
-// predates the camera and still judges it from config it fetched earlier.
-const trusted: CameraStatus[] = ['ok', 'not_reported']
 
 const statusClass: Record<TableStatus, string> = {
   empty:
@@ -54,7 +51,6 @@ const tablePriority: TableStatus[] = [
   'empty',
 ]
 const isSeated = (s: TableStatus) => s === 'occupied' || s === 'leave_confirm'
-const pad = (n: number) => String(n).padStart(2, '0')
 
 const elapsed = (ms: number, t: I18n['t']) => {
   const m = Math.max(0, Math.floor(ms / 60_000))
@@ -78,7 +74,6 @@ export function Dashboard() {
   const cameraStatus = new Map(
     current.data?.cameras.map((c) => [c.id, c.status])
   )
-  // main.py reports seat j of table i as "<zone id>_t<ii>_s<jj>".
   const zoneTables = (zones.data ?? []).map((zone) => {
     const camera = cameraStatus.get(zone.camera_id) ?? 'offline'
     return {
@@ -86,9 +81,9 @@ export function Dashboard() {
       camera,
       tables: zone.seats.map((tableSeats, i) => {
         const seatStates = tableSeats.map((seat, j) => {
-          const s = seats.get(`${zone.id}_t${pad(i)}_s${pad(j)}`)
+          const s = seats.get(seatId(zone.id, i, j))
           const status: TableStatus =
-            s && trusted.includes(camera) ? s.status : 'unknown'
+            s && trustedCameras.includes(camera) ? s.status : 'unknown'
           return { name: seat.name, status, since: s?.since }
         })
         const seated = seatStates.filter((s) => isSeated(s.status))
@@ -148,7 +143,7 @@ export function Dashboard() {
           <CardHeader>
             <CardTitle>{zone.id}</CardTitle>
             <CardDescription>{zone.description}</CardDescription>
-            {!trusted.includes(camera) && (
+            {!trustedCameras.includes(camera) && (
               <p className='text-sm text-red-700 dark:text-red-300'>
                 {t('dashboard.cameraProblem', {
                   camera: zone.camera_id,
