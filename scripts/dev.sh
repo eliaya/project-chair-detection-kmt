@@ -2,8 +2,8 @@
 
 # KMT table occupancy monitor: development environment launcher
 #
-# Checks prerequisites, lists the URLs, then hands over to ../dev.sh, which runs
-# Vite + the Worker (/api/*) + local D1 on one port. Ctrl+C stops everything.
+# Checks prerequisites, then hands over to ../dev.sh, which runs Vite + the Worker
+# (/api/*) + local D1 on one port and prints the URLs. Ctrl+C stops everything.
 #
 # Usage (same options as ./dev.sh):
 #   ./scripts/dev.sh
@@ -11,7 +11,7 @@
 #   ./scripts/dev.sh --reset [--seed]          # delete local data first (asks to confirm)
 #   ./scripts/dev.sh <worktree-path> <port>    # another worktree / port
 #
-# After start:
+# After start (5173, or the next free port when 5173 is taken and no port was given):
 #   - Admin:  http://localhost:5173          (LAN: http://<Mac IP>:5173)
 #   - Portal: http://localhost:5173/portal   (public, no login)
 #   - API:    http://localhost:5173/api/*    (a Pi on the LAN can POST here)
@@ -29,16 +29,6 @@ for cmd in node npm; do
   command -v "$cmd" >/dev/null 2>&1 || { echo -e "${RED}Error: $cmd not found.${NC}"; exit 1; }
 done
 
-# ../dev.sh takes the port as its last argument (default 5173).
-PORT=5173
-[ "$#" -ge 2 ] && case "${!#}" in ''|*[!0-9]*) ;; *) PORT="${!#}" ;; esac
-
-LAN_IP="$(ipconfig getifaddr en0 2>/dev/null || true)"
 echo -e "${GREEN}Starting KMT occupancy development environment...${NC}"
-echo -e "${GREEN}Services:${NC}"
-echo -e "  • Admin:  http://localhost:$PORT${LAN_IP:+   (LAN: http://$LAN_IP:$PORT)}"
-echo -e "  • Portal: http://localhost:$PORT/portal"
-echo -e "  • API:    http://localhost:$PORT/api/*"
-echo -e "  • Stop:   Ctrl+C\n"
 
 exec "$ROOT/dev.sh" "$@"

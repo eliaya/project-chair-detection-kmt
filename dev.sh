@@ -30,6 +30,17 @@ WEB="$WORKTREE/web"
 
 [ -f "$WEB/package.json" ] || { echo "Error: no web/package.json in $WORKTREE" >&2; exit 1; }
 case "$PORT" in ''|*[!0-9]*) echo "Error: port must be numeric: $PORT" >&2; exit 1;; esac
+
+# Another project's Vite often holds 5173, and vite --strictPort would only fail after the
+# migrations. Without an explicit port, move to the next free one.
+listener() { lsof -nP -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null | head -1; }
+pid="$(listener "$PORT" || true)"
+if [ -n "$pid" ]; then
+  echo "[dev] port $PORT is in use by pid $pid: $(ps -o command= -p "$pid")" >&2
+  [ "$#" -eq 2 ] && { echo "Error: stop that process or choose another port" >&2; exit 1; }
+  while [ -n "$(listener "$PORT" || true)" ]; do PORT=$((PORT + 1)); done
+  echo "[dev] using port $PORT instead (a Pi set to the old port needs its URL changed)" >&2
+fi
 cd "$WEB"
 
 if [ "$RESET" = 1 ]; then
@@ -59,5 +70,7 @@ fi
 CI=true npm run db:migrate:local
 if [ "$SEED" = 1 ]; then npm run --silent seed; fi
 
-echo "[dev] $WEB → http://localhost:${PORT}  (Setup code: SETUP_TOKEN in web/.dev.vars)"
+LAN_IP="$(ipconfig getifaddr en0 2>/dev/null || true)"
+echo "[dev] $WEB → http://localhost:${PORT}${LAN_IP:+  (LAN: http://$LAN_IP:$PORT)}"
+echo "[dev] public portal: http://localhost:${PORT}/portal  (Setup code: SETUP_TOKEN in web/.dev.vars)"
 exec npm run dev -- --port "$PORT" --strictPort --host
