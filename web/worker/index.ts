@@ -2,6 +2,7 @@ import { type z } from 'zod'
 import {
   adminCreateSchema,
   adminUpdateSchema,
+  apiKeySchema,
   cameraSchema,
   deviceSchema,
   floorplanSchema,
@@ -22,6 +23,13 @@ import {
   trustedCameras,
   zoneOf,
 } from '../shared/occupancy'
+import {
+  emptyTables,
+  historyQuerySchema,
+  isUsed,
+  tableOf,
+} from '../shared/history'
+import { openapi } from './openapi'
 import {
   DUMMY_HASH,
   hashPassword,
@@ -83,6 +91,10 @@ async function body<T extends z.ZodType>(
   } catch {
     throw new HttpError(400, 'Invalid JSON')
   }
+  return validate(data, schema)
+}
+
+function validate<T extends z.ZodType>(data: unknown, schema: T): z.infer<T> {
   const r = schema.safeParse(data)
   if (!r.success)
     throw new HttpError(
@@ -104,14 +116,16 @@ async function requireAdmin(req: Request, env: Env) {
   return admin
 }
 
-async function requireDevice(req: Request, env: Env) {
+// Bearer token of a device (main.py) or of an API key (third-party programs).
+async function requireToken(req: Request, env: Env, table: 'devices' | 'api_keys') {
   const token = req.headers.get('Authorization')?.match(/^Bearer (.+)$/)?.[1]
   const row = token
-    ? await env.DB.prepare('SELECT id FROM devices WHERE token_hash = ?')
+    ? await env.DB.prepare(`SELECT id FROM ${table} WHERE token_hash = ?`)
         .bind(await sha256(token))
         .first<{ id: string }>()
     : null
-  if (!row) throw new HttpError(401, 'Invalid device token')
+  if (!row)
+    throw new HttpError(401, table === 'devices' ? 'Invalid device token' : 'Invalid API key')
   return row.id
 }
 
@@ -305,6 +319,54 @@ async function devices(req: Request, env: Env, id?: string, action?: string) {
   throw new HttpError(404, 'Not Found')
 }
 
+// Keys for /api/v1/*; like device tokens, only the hash is kept.
+async function apiKeys(req: Request, env: Env, id?: string, action?: string) {
+  const cols = 'id, name, created_at'
+  if (!id && req.method === 'GET') {
+    const { results } = await env.DB.prepare(
+      `SELECT ${cols} FROM api_keys ORDER BY id`
+    ).all()
+    return json(results)
+  }
+  if (!id && req.method === 'POST') {
+    const d = await body(req, apiKeySchema)
+    const token = randomToken()
+    const row = await env.DB.prepare(
+      `INSERT INTO api_keys (name, token_hash) VALUES (?, ?) RETURNING ${cols}`
+    )
+      .bind(d.name, await sha256(token))
+      .first()
+    return json({ ...row, token }, 201)
+  }
+  if (id && action === 'token' && req.method === 'POST') {
+    const token = randomToken()
+    const row = await env.DB.prepare(
+      `UPDATE api_keys SET token_hash = ? WHERE id = ? RETURNING ${cols}`
+    )
+      .bind(await sha256(token), Number(id))
+      .first()
+    if (!row) throw new HttpError(404, 'Not Found')
+    return json({ ...row, token })
+  }
+  if (id && !action && req.method === 'PUT') {
+    const d = await body(req, apiKeySchema)
+    const row = await env.DB.prepare(
+      `UPDATE api_keys SET name = ? WHERE id = ? RETURNING ${cols}`
+    )
+      .bind(d.name, Number(id))
+      .first()
+    if (!row) throw new HttpError(404, 'Not Found')
+    return json(row)
+  }
+  if (id && !action && req.method === 'DELETE')
+    return deleted(
+      await env.DB.prepare('DELETE FROM api_keys WHERE id = ?')
+        .bind(Number(id))
+        .run()
+    )
+  throw new HttpError(404, 'Not Found')
+}
+
 // Plain config tables; ids are immutable after creation (seat ids derive from zone ids).
 const configTables = {
   cameras: { schema: cameraSchema, jsonCols: [] as string[] },
@@ -370,6 +432,9 @@ async function crud(
         ? [
             env.DB.prepare(
               "DELETE FROM seat_state WHERE seat_id GLOB ? || '_t[0-9][0-9]_s[0-9][0-9]'"
+            ).bind(id),
+            env.DB.prepare(
+              "DELETE FROM table_state WHERE table_id GLOB ? || '_t[0-9][0-9]'"
             ).bind(id),
           ]
         : []),
@@ -547,6 +612,73 @@ async function occupancy(req: Request, env: Env, url: URL, sub?: string) {
   throw new HttpError(404, 'Not Found')
 }
 
+// Third-party API, called with a key from the admin UI; described by /api/v1/openapi.json.
+async function v1(req: Request, env: Env, url: URL, sub?: string) {
+  if (req.method !== 'GET') throw new HttpError(404, 'Not Found')
+  if (sub === 'openapi.json') return json(openapi(url.origin))
+  await requireToken(req, env, 'api_keys')
+  if (sub === 'history') {
+    const q = validate(Object.fromEntries(url.searchParams), historyQuerySchema)
+    const filters = [
+      ['kind = ?', q.kind],
+      ['target = ?', q.target],
+      ['ended_at >= ?', q.from],
+      ['ended_at < ?', q.to],
+    ].filter(([, v]) => v !== undefined)
+    const { results } = await env.DB.prepare(
+      `SELECT * FROM history WHERE ${['id > ?', ...filters.map(([w]) => w)].join(' AND ')}
+       ORDER BY id LIMIT ?`
+    )
+      .bind(q.after, ...filters.map(([, v]) => v), q.limit)
+      .all<{ id: number }>()
+    return json({
+      items: results,
+      next_after: results.length === q.limit ? results.at(-1)!.id : null,
+    })
+  }
+  if (sub === 'current') {
+    const [seats, tables, zones, cams] = await env.DB.batch<Record<string, string>>([
+      env.DB.prepare('SELECT seat_id, status, period_since FROM seat_state ORDER BY seat_id'),
+      env.DB.prepare('SELECT table_id, empty, since FROM table_state ORDER BY table_id'),
+      env.DB.prepare('SELECT id, camera_id FROM zones'),
+      env.DB.prepare('SELECT id, device_id FROM cameras'),
+    ])
+    const devs = await devicesById(env)
+    const now = Date.now()
+    const deviceOf = new Map(cams.results.map((c) => [c.id, c.device_id]))
+    const cameraOf = new Map(zones.results.map((z) => [z.id, z.camera_id]))
+    // Only a working camera's seats are current; "<zone>_tII" or "<zone>_tII_sJJ".
+    const live = (id: string) => {
+      const cam = cameraOf.get(id.replace(/_t\d\d(_s\d\d)?$/, ''))
+      return (
+        !!cam &&
+        trustedCameras.includes(cameraStatus(cam, devs.get(deviceOf.get(cam)!), now))
+      )
+    }
+    const seconds = (since: string | null) =>
+      since ? Math.round((now - Date.parse(since)) / 100) / 10 : null
+    return json({
+      now: new Date(now).toISOString(),
+      seats: seats.results.map((s) => ({
+        seat_id: s.seat_id,
+        status: s.status,
+        used: isUsed(s.status as SeatStatus),
+        since: s.period_since,
+        duration_s: seconds(s.period_since),
+        live: live(s.seat_id),
+      })),
+      tables: tables.results.map((t) => ({
+        table_id: t.table_id,
+        empty: !!t.empty,
+        since: t.since,
+        duration_s: seconds(t.since),
+        live: live(t.table_id),
+      })),
+    })
+  }
+  throw new HttpError(404, 'Not Found')
+}
+
 // GET /api/config: same shape as config.json, limited to the calling device.
 async function deviceConfig(env: Env, deviceId: string, origin: string) {
   const [, cams, zones] = await env.DB.batch<Record<string, unknown>>([
@@ -594,8 +726,31 @@ async function ingest(req: Request, env: Env, deviceId: string) {
   )
     .bind(JSON.stringify(ids))
     .all<{ seat_id: string; status: string }>()
-  const current = new Map(results.map((r) => [r.seat_id, r.status]))
+  const current = new Map(results.map((r) => [r.seat_id, r.status as SeatStatus]))
   const changed = ids.filter((id) => current.get(id) !== p.occupancy[id].status)
+  // Seats that start a new used/empty period: first report, or a switch between the two.
+  const switched = changed.filter((id) => {
+    const prev = current.get(id)
+    return !prev || isUsed(prev) !== isUsed(p.occupancy[id].status)
+  })
+  const tables = [...new Set(switched.map(tableOf))]
+  const seatsOfTables = tables.length
+    ? (
+        await env.DB.prepare(
+          'SELECT seat_id, status FROM seat_state WHERE substr(seat_id, 1, length(seat_id) - 4) IN (SELECT value FROM json_each(?))'
+        )
+          .bind(JSON.stringify(tables))
+          .all<{ seat_id: string; status: SeatStatus }>()
+      ).results
+    : []
+  const empty = emptyTables(
+    new Map([
+      ...seatsOfTables.map((r) => [r.seat_id, r.status] as const),
+      ...ids.map((id) => [id, p.occupancy[id].status] as const),
+    ])
+  )
+  const secondsSince = (col: string) =>
+    `round((julianday(?) - julianday(${col})) * 86400, 1)`
 
   const stmts = [
     p.health
@@ -609,19 +764,50 @@ async function ingest(req: Request, env: Env, deviceId: string) {
   ]
   for (const id of changed) {
     const status = p.occupancy[id].status
+    const prev = current.get(id)
+    const isSwitch = switched.includes(id)
+    // History: close the seat's period. Same late-payload rule as the update below.
+    if (prev && isSwitch)
+      stmts.push(
+        env.DB.prepare(
+          `INSERT INTO history (kind, target, started_at, ended_at, duration_s)
+           SELECT ?, seat_id, period_since, ?, ${secondsSince('period_since')}
+           FROM seat_state WHERE seat_id = ? AND since <= ? AND period_since IS NOT NULL`
+        ).bind(isUsed(prev) ? 'seat_used' : 'seat_empty', ts, ts, id, ts)
+      )
     stmts.push(
       // A late (queued offline) payload must not overwrite a newer state.
       env.DB.prepare(
-        `INSERT INTO seat_state (seat_id, device_id, status, since) VALUES (?, ?, ?, ?)
+        `INSERT INTO seat_state (seat_id, device_id, status, since, period_since) VALUES (?, ?, ?, ?, ?)
          ON CONFLICT (seat_id) DO UPDATE SET device_id = excluded.device_id,
-           status = excluded.status, since = excluded.since
+           status = excluded.status, since = excluded.since,
+           period_since = COALESCE(excluded.period_since, seat_state.period_since)
          WHERE excluded.since >= seat_state.since`
-      ).bind(id, deviceId, status, ts),
+      ).bind(id, deviceId, status, ts, isSwitch ? ts : null),
       env.DB.prepare(
         'INSERT INTO occupancy_events (seat_id, device_id, status, ts) VALUES (?, ?, ?, ?)'
       ).bind(id, deviceId, status, ts)
     )
   }
+  for (const table of tables) {
+    const isEmpty = empty.get(table) ? 1 : 0
+    stmts.push(
+      // History: an empty table that now has a guest closes its empty period.
+      env.DB.prepare(
+        `INSERT INTO history (kind, target, started_at, ended_at, duration_s)
+         SELECT 'table_empty', table_id, since, ?, ${secondsSince('since')}
+         FROM table_state WHERE table_id = ? AND empty = 1 AND ? = 0 AND since <= ?`
+      ).bind(ts, ts, table, isEmpty, ts),
+      env.DB.prepare(
+        `INSERT INTO table_state (table_id, empty, since) VALUES (?, ?, ?)
+         ON CONFLICT (table_id) DO UPDATE SET empty = excluded.empty, since = excluded.since
+         WHERE table_state.empty != excluded.empty AND excluded.since >= table_state.since`
+      ).bind(table, isEmpty, ts)
+    )
+  }
+  // shortcut: no events arrive while a Pi or camera is down, so an open period runs on
+  // until the next report (a restarted main.py reports every seat empty); log outages
+  // as their own kind if gaps must be told apart.
   await env.DB.batch(stmts)
   return json({ changed: changed.length })
 }
@@ -633,9 +819,10 @@ async function route(req: Request, env: Env) {
     .map(decodeURIComponent) as (string | undefined)[]
 
   if (res === 'config' && !id && req.method === 'GET')
-    return deviceConfig(env, await requireDevice(req, env), url.origin)
+    return deviceConfig(env, await requireToken(req, env, 'devices'), url.origin)
   if (res === 'occupancy' && !id && req.method === 'POST')
-    return ingest(req, env, await requireDevice(req, env))
+    return ingest(req, env, await requireToken(req, env, 'devices'))
+  if (res === 'v1' && !action) return v1(req, env, url, id)
   if (res === 'auth') return auth(req, env, id)
   if (res === 'setup' && !id) return setup(req, env)
   if (res === 'public' && id === 'occupancy' && !action && req.method === 'GET')
@@ -646,6 +833,7 @@ async function route(req: Request, env: Env) {
   const me = await requireAdmin(req, env)
   if (res === 'admins' && !action) return admins(req, env, me, id)
   if (res === 'devices') return devices(req, env, id, action)
+  if (res === 'api_keys') return apiKeys(req, env, id, action)
   if ((res === 'cameras' || res === 'zones') && !action)
     return crud(req, env, res, id)
   if (res === 'settings' && id === 'thresholds' && !action)

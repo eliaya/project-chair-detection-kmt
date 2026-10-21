@@ -39,6 +39,9 @@ export const adminUpdateSchema = adminCreateSchema.extend({
 
 export const deviceSchema = z.object({ id, name })
 
+// A third-party program calling /api/v1/*.
+export const apiKeySchema = z.object({ name: name.min(1) })
+
 export const cameraSchema = z.object({
   id,
   device_id: id,

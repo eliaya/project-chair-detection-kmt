@@ -117,6 +117,60 @@ const leftover = (await call('GET', '/api/occupancy/events')).data.filter((e: { 
 assert.equal((await call('DELETE', '/api/occupancy/events', { ids: leftover.map((e: { id: number }) => e.id) })).data.deleted, 1)
 step('device health: not connected → starting → online / camera error')
 
+// Now s0 (t00) is occupied since `now`, s1 (t00) occupied since the payload above, smoke-cam open_failed.
+assert.equal((await call('GET', '/api/v1/history')).status, 401)
+const key = await call('POST', '/api/api_keys', { name: 'smoke' })
+assert.equal(key.status, 201)
+assert.ok(key.data.token.length > 30 && !('token_hash' in key.data))
+const v1 = (path: string, token = key.data.token) => call('GET', `/api/v1/${path}`, undefined, token)
+type Period = { id: number; kind: string; target: string; started_at: string; ended_at: string; duration_s: number }
+// History rows are kept after cleanup, so only this run's periods are looked at.
+const runStart = encodeURIComponent(new Date(now).toISOString())
+const periods = async (target: string): Promise<Period[]> =>
+  (await v1(`history?target=${target}&from=${runStart}`)).data.items
+const at = () => new Date().toISOString()
+const t00 = 'smoke-zone_t00'
+await post({ [s0]: { status: 'leave_confirm' } }, at())
+assert.deepEqual(await periods(s0), [])
+const s0Left = at()
+await post({ [s0]: { status: 'empty' } }, s0Left)
+const s1Left = at()
+await post({ [s1]: { status: 'empty' } }, s1Left)
+await new Promise((r) => setTimeout(r, 1100))
+const s1Back = at()
+await post({ [s1]: { status: 'confirming' } }, s1Back)
+assert.deepEqual(await periods(t00), [])
+await post({ [s1]: { status: 'occupied' } }, s1Back)
+const [used0] = await periods(s0)
+assert.equal(used0.kind, 'seat_used')
+assert.equal(used0.started_at, new Date(now).toISOString())
+assert.equal(used0.ended_at, s0Left)
+assert.deepEqual((await periods(s1)).map((p) => p.kind), ['seat_empty', 'seat_used', 'seat_empty'])
+const [emptyT] = await periods(t00)
+assert.deepEqual([emptyT.kind, emptyT.started_at, emptyT.ended_at], ['table_empty', s1Left, s1Back])
+for (const p of [used0, emptyT])
+  assert.ok(Math.abs(p.duration_s - (Date.parse(p.ended_at) - Date.parse(p.started_at)) / 1000) < 0.15)
+assert.ok(emptyT.duration_s >= 1)
+const kindOnly = (await v1(`history?kind=table_empty&from=${encodeURIComponent(s1Left)}`)).data.items
+assert.ok(kindOnly.every((p: Period) => p.kind === 'table_empty') && kindOnly.some((p: Period) => p.id === emptyT.id))
+const page1 = (await v1(`history?target=${s1}&from=${runStart}&limit=1`)).data
+assert.equal(page1.items.length, 1)
+const page2 = (await v1(`history?target=${s1}&from=${runStart}&limit=1&after=${page1.next_after}`)).data
+assert.equal(page2.items[0].id > page1.items[0].id, true)
+assert.equal((await v1('history?limit=0')).status, 400)
+assert.equal((await v1('history?from=yesterday')).status, 400)
+const now1 = (await v1('current')).data
+const seat0 = now1.seats.find((x: { seat_id: string }) => x.seat_id === s0)
+assert.deepEqual([seat0.used, seat0.since, seat0.live], [false, s0Left, false])
+const table0 = now1.tables.find((x: { table_id: string }) => x.table_id === t00)
+assert.deepEqual([table0.empty, table0.since, table0.live], [false, s1Back, false])
+const spec = (await call('GET', '/api/v1/openapi.json')).data
+assert.deepEqual(Object.keys(spec.paths), ['/history', '/current'])
+assert.equal(spec.servers[0].url, `${base}/api/v1`)
+const mineEv = (await call('GET', '/api/occupancy/events')).data.filter((e: { seat_id: string }) => e.seat_id.startsWith('smoke-zone'))
+await call('DELETE', '/api/occupancy/events', { ids: mineEv.map((e: { id: number }) => e.id) })
+step('history: seat used / empty and table empty periods, /api/v1 key, query, current, OpenAPI')
+
 const rotated = (await call('POST', '/api/devices/smoke-pi/token')).data.token
 assert.equal((await call('GET', '/api/config', undefined, dev.data.token)).status, 401)
 assert.equal((await call('GET', '/api/config', undefined, rotated)).status, 200)
@@ -159,6 +213,11 @@ assert.equal((await call('DELETE', `/api/admins/${me.id}`)).status, 400)
 step('admin CRUD, cannot delete self')
 
 assert.equal((await call('DELETE', '/api/zones/smoke-zone')).status, 204)
+assert.ok(!(await v1('current')).data.tables.some((x: { table_id: string }) => x.table_id.startsWith('smoke-zone_')))
+const rotatedKey = (await call('POST', `/api/api_keys/${key.data.id}/token`)).data.token
+assert.equal((await v1('current')).status, 401)
+assert.equal((await call('DELETE', `/api/api_keys/${key.data.id}`)).status, 204)
+assert.equal((await v1('current', rotatedKey)).status, 401)
 const after = (await call('GET', '/api/occupancy/current')).data
 assert.ok(!after.seats.some((s: { seat_id: string }) => s.seat_id.startsWith('smoke-zone_')))
 assert.equal((await call('DELETE', '/api/cameras/smoke-cam')).status, 204)
@@ -166,4 +225,4 @@ assert.equal((await call('DELETE', '/api/devices/smoke-pi')).status, 204)
 assert.equal((await call('DELETE', '/api/devices/smoke-pi')).status, 404)
 await call('POST', '/api/auth/logout')
 assert.equal((await call('GET', '/api/auth/me')).status, 401)
-step('cleanup (zone delete clears its seat states) and logout')
+step('cleanup (zone delete clears its seat and table states; history rows stay), API key rotation / delete, logout')
