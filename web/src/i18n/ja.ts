@@ -204,6 +204,12 @@ export const ja: Dict = {
   'dashboard.seated': '{n}/{total}席 着席',
   'time.minutes': '{m}分',
   'time.hoursMinutes': '{h}時間{m}分',
+  'portal.emptyTables': '空きテーブル',
+  'portal.emptySeats': '空席',
+  'portal.usedSeats': '利用中の席',
+  'portal.unknown': '{n}席は計測できていません',
+  'portal.offline': '接続が切れています。最後のデータを表示しています。',
+  'portal.updated': '{time} 更新',
 
   'history.desc': '卓の状態が変化した記録（最新500件）',
   'history.time': '日時',

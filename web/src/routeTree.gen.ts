@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as PortalRouteImport } from './routes/portal'
 import { Route as authSetupRouteImport } from './routes/(auth)/setup'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as errors401RouteImport } from './routes/(errors)/401'
@@ -34,6 +35,11 @@ import { Route as AuthenticatedZonesIndexRouteImport } from './routes/_authentic
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalRoute = PortalRouteImport.update({
+  id: '/portal',
+  path: '/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authSetupRoute = authSetupRouteImport.update({
@@ -155,6 +161,7 @@ const AuthenticatedZonesIndexRoute = AuthenticatedZonesIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
+  '/portal': typeof PortalRoute
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/setup': typeof authSetupRoute
   '/sign-in': typeof authSignInRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/zones/': typeof AuthenticatedZonesIndexRoute
 }
 export interface FileRoutesByTo {
+  '/portal': typeof PortalRoute
   '/setup': typeof authSetupRoute
   '/sign-in': typeof authSignInRoute
   '/401': typeof errors401Route
@@ -201,6 +209,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/portal': typeof PortalRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/(auth)/setup': typeof authSetupRoute
   '/(auth)/sign-in': typeof authSignInRoute
@@ -227,6 +236,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/portal'
     | '/settings'
     | '/setup'
     | '/sign-in'
@@ -249,6 +259,7 @@ export interface FileRouteTypes {
     | '/zones/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/portal'
     | '/setup'
     | '/sign-in'
     | '/401'
@@ -272,6 +283,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authenticated'
+    | '/portal'
     | '/_authenticated/settings'
     | '/(auth)/setup'
     | '/(auth)/sign-in'
@@ -297,6 +309,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  PortalRoute: typeof PortalRoute
   authSetupRoute: typeof authSetupRoute
   authSignInRoute: typeof authSignInRoute
   errors401Route: typeof errors401Route
@@ -313,6 +326,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal': {
+      id: '/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof PortalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth)/setup': {
@@ -516,6 +536,7 @@ const AuthenticatedRouteRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  PortalRoute: PortalRoute,
   authSetupRoute: authSetupRoute,
   authSignInRoute: authSignInRoute,
   errors401Route: errors401Route,

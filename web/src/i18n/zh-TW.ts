@@ -198,6 +198,12 @@ export const zhTW: Dict = {
   'dashboard.seated': '{n}/{total} 席入座',
   'time.minutes': '{m} 分鐘',
   'time.hoursMinutes': '{h} 小時 {m} 分',
+  'portal.emptyTables': '空桌',
+  'portal.emptySeats': '空位',
+  'portal.usedSeats': '使用中座位',
+  'portal.unknown': '{n} 個座位未回報',
+  'portal.offline': '連線中斷，顯示最後的資料。',
+  'portal.updated': '更新於 {time}',
 
   'history.desc': '桌位狀態變化紀錄（最新 500 筆）',
   'history.time': '時間',

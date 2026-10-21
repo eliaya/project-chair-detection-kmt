@@ -198,6 +198,12 @@ export const zhCN: Dict = {
   'dashboard.seated': '{n}/{total} 席入座',
   'time.minutes': '{m} 分钟',
   'time.hoursMinutes': '{h} 小时 {m} 分',
+  'portal.emptyTables': '空桌',
+  'portal.emptySeats': '空位',
+  'portal.usedSeats': '使用中座位',
+  'portal.unknown': '{n} 个座位未回报',
+  'portal.offline': '连接中断，显示最后的数据。',
+  'portal.updated': '更新于 {time}',
 
   'history.desc': '桌位状态变化记录（最新 500 条）',
   'history.time': '时间',

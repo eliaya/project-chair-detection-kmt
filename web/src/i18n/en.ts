@@ -209,6 +209,12 @@ export const en = {
   'dashboard.seated': '{n}/{total} seated',
   'time.minutes': '{m} min',
   'time.hoursMinutes': '{h} h {m} min',
+  'portal.emptyTables': 'Vacant tables',
+  'portal.emptySeats': 'Vacant seats',
+  'portal.usedSeats': 'Seats in use',
+  'portal.unknown': '{n} seats are not reporting',
+  'portal.offline': 'Connection lost. Showing the last data.',
+  'portal.updated': 'Updated {time}',
 
   'history.desc': 'Table status changes (latest 500)',
   'history.time': 'Time',
