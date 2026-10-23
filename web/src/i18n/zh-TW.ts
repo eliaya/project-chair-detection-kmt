@@ -301,7 +301,13 @@ export const zhTW: Dict = {
   'zones.desc': '攝影機畫面上的座位區域（多邊形），以及其中的桌與座位。',
   'zones.descPlaceholder': '雙人座（面對面）× 4 桌',
   'zones.seatsHint':
-    '貼上 draw_zones.py 的輸出。一桌 = 座位的陣列；座位 = 名稱與攝影機畫面上的多邊形（像素座標 [x, y]，至少 3 個點）。main.py 會將第 i 桌第 j 個座位以「區域ID_tii_sjj」回報。',
+    '選擇攝影機快照（在 Pi 執行 python3 draw_zones.py --snapshot，解析度與攝影機相同），點選座位的各個角，再按「儲存」。多邊形會填入下方 JSON，也可直接編輯或貼上。一桌 = 座位的陣列；座位 = 名稱與攝影機畫面上的多邊形（像素座標 [x, y]，至少 3 個點）。main.py 會將第 i 桌第 j 個座位以「區域ID_tii_sjj」回報。',
+  'zones.snapshot': '攝影機快照',
+  'zones.prefix': '座位名稱字首',
+  'zones.closeSeat': '確定座位',
+  'zones.nextTable': '下一桌',
+  'zones.undo': '復原',
+  'zones.drawing': '第 {table} 桌・{points} 個點（點選畫面加入角點）',
   'zones.count': '{tables} 桌 / {seats} 個座位',
 
   'thresholds.desc':

@@ -1,8 +1,9 @@
 """座席区域の作成ツール。
 
 1. Pi でカメラ画像を保存:      python3 draw_zones.py --snapshot cam1.jpg --device /dev/video0
-2. 開発PCで座席の多角形を描く:  python3 draw_zones.py --image cam1.jpg --prefix A --out zone_A.json
-3. 出力の "seats" を管理画面の「ゾーン」→「卓と座席」に貼り付ける
+2. 管理画面の「ゾーン」→「卓と座席」でその画像を選び、座席の角をクリックして保存する
+   （オフラインで描くとき: python3 draw_zones.py --image cam1.jpg --prefix A --out zone_A.json
+    の出力 "seats" を同じ欄に貼り付ける）
 
 操作（画像ウィンドウ上）:
   左クリック        頂点を追加

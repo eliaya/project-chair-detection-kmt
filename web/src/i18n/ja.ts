@@ -310,7 +310,13 @@ export const ja: Dict = {
   'zones.desc': 'カメラ画像上の座席区域（多角形）と、その中の卓・座席です。',
   'zones.descPlaceholder': '2人席（向かい合わせ）× 4テーブル',
   'zones.seatsHint':
-    'draw_zones.py の出力を貼り付けます。1卓 = 座席の配列、座席 = 名前とカメラ画像上の多角形（ピクセル座標 [x, y]、3点以上）。main.py は i 番目の卓の j 番目の座席を「ゾーンID_tii_sjj」として送信します。',
+    'カメラ画像（Pi で python3 draw_zones.py --snapshot、カメラと同じ解像度）を選び、座席の角をクリックして「保存」します。多角形は下の JSON に入り、直接編集や貼り付けもできます。1卓 = 座席の配列、座席 = 名前とカメラ画像上の多角形（ピクセル座標 [x, y]、3点以上）。main.py は i 番目の卓の j 番目の座席を「ゾーンID_tii_sjj」として送信します。',
+  'zones.snapshot': 'カメラ画像',
+  'zones.prefix': '座席名の頭文字',
+  'zones.closeSeat': '座席を確定',
+  'zones.nextTable': '次の卓へ',
+  'zones.undo': '元に戻す',
+  'zones.drawing': '卓 {table}・{points} 点（画像をクリックして角を追加）',
   'zones.count': '{tables}卓 / {seats}席',
 
   'thresholds.desc':

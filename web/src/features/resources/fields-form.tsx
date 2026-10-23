@@ -17,11 +17,13 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { PasswordInput } from '@/components/password-input'
 import { SelectDropdown } from '@/components/select-dropdown'
+import { SeatsEditor } from './seats-editor'
 
 export type Field = {
   name: string
   label: Key
-  type?: 'text' | 'number' | 'password' | 'json' | 'select'
+  // seats: JSON, plus polygons drawn on a camera snapshot
+  type?: 'text' | 'number' | 'password' | 'json' | 'seats' | 'select'
   // select: ids of this resource become the options
   optionsFrom?: string
   // An i18n key, or a literal example such as 'pi1'
@@ -43,9 +45,11 @@ type FieldsFormProps = {
   onValid: (values: Record<string, unknown>) => void
 }
 
+const isJson = (f: Field) => f.type === 'json' || f.type === 'seats'
+
 const toText = (f: Field, v: unknown) => {
   if (v === undefined || v === null || f.type === 'password') return ''
-  return f.type === 'json' ? JSON.stringify(v) : String(v)
+  return isJson(f) ? JSON.stringify(v) : String(v)
 }
 
 // Inputs are edited as text, converted per field type, then checked with the shared zod schema.
@@ -70,7 +74,7 @@ export function FieldsForm({
     for (const f of fields) {
       const v = text[f.name]
       if (f.type === 'number') values[f.name] = v === '' ? undefined : Number(v)
-      else if (f.type === 'json') {
+      else if (isJson(f)) {
         try {
           values[f.name] = JSON.parse(v)
         } catch {
@@ -119,31 +123,39 @@ export function FieldsForm({
                     disabled={isEdit && f.immutable}
                   />
                 ) : (
-                  <FormControl>
-                    {f.type === 'json' ? (
-                      <Textarea
-                        rows={4}
-                        className='font-mono text-xs'
-                        placeholder={f.placeholder && tr(f.placeholder)}
-                        {...field}
-                      />
-                    ) : f.type === 'password' ? (
-                      <PasswordInput
-                        autoComplete='new-password'
-                        placeholder={f.placeholder && tr(f.placeholder)}
-                        {...field}
-                      />
-                    ) : (
-                      <Input
-                        type={f.type === 'number' ? 'number' : 'text'}
-                        step='any'
-                        autoComplete='off'
-                        placeholder={f.placeholder && tr(f.placeholder)}
-                        {...field}
-                        disabled={isEdit && f.immutable}
+                  <>
+                    {f.type === 'seats' && (
+                      <SeatsEditor
+                        value={field.value}
+                        onChange={field.onChange}
                       />
                     )}
-                  </FormControl>
+                    <FormControl>
+                      {isJson(f) ? (
+                        <Textarea
+                          rows={4}
+                          className='font-mono text-xs'
+                          placeholder={f.placeholder && tr(f.placeholder)}
+                          {...field}
+                        />
+                      ) : f.type === 'password' ? (
+                        <PasswordInput
+                          autoComplete='new-password'
+                          placeholder={f.placeholder && tr(f.placeholder)}
+                          {...field}
+                        />
+                      ) : (
+                        <Input
+                          type={f.type === 'number' ? 'number' : 'text'}
+                          step='any'
+                          autoComplete='off'
+                          placeholder={f.placeholder && tr(f.placeholder)}
+                          {...field}
+                          disabled={isEdit && f.immutable}
+                        />
+                      )}
+                    </FormControl>
+                  </>
                 )}
                 {f.description && (
                   <FormDescription>{t(f.description)}</FormDescription>

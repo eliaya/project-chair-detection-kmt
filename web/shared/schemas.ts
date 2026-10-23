@@ -53,7 +53,7 @@ export const cameraSchema = z.object({
 })
 
 // A seat is taken when a person's lower-body point falls in its polygon
-// (camera image pixels, drawn with draw_zones.py).
+// (camera image pixels, drawn in the zone form or with draw_zones.py).
 const seat = z.object({
   name: z.string().trim().min(1).max(16),
   vertices: z

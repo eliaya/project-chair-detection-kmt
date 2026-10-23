@@ -301,7 +301,13 @@ export const zhCN: Dict = {
   'zones.desc': '摄像头画面上的座位区域（多边形），以及其中的桌与座位。',
   'zones.descPlaceholder': '双人座（面对面）× 4 桌',
   'zones.seatsHint':
-    '粘贴 draw_zones.py 的输出。一桌 = 座位的数组；座位 = 名称与摄像头画面上的多边形（像素坐标 [x, y]，至少 3 个点）。main.py 会将第 i 桌第 j 个座位以“区域ID_tii_sjj”上报。',
+    '选择摄像头快照（在 Pi 运行 python3 draw_zones.py --snapshot，分辨率与摄像头相同），点击座位的各个角，再点“保存”。多边形会填入下方 JSON，也可直接编辑或粘贴。一桌 = 座位的数组；座位 = 名称与摄像头画面上的多边形（像素坐标 [x, y]，至少 3 个点）。main.py 会将第 i 桌第 j 个座位以“区域ID_tii_sjj”上报。',
+  'zones.snapshot': '摄像头快照',
+  'zones.prefix': '座位名称前缀',
+  'zones.closeSeat': '确定座位',
+  'zones.nextTable': '下一桌',
+  'zones.undo': '撤销',
+  'zones.drawing': '第 {table} 桌・{points} 个点（点击画面添加角点）',
   'zones.count': '{tables} 桌 / {seats} 个座位',
 
   'thresholds.desc':

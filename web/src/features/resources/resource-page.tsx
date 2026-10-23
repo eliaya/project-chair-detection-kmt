@@ -167,7 +167,14 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
         open={dialog?.type === 'form'}
         onOpenChange={(open) => !open && setDialog(null)}
       >
-        <DialogContent className='sm:max-w-lg'>
+        <DialogContent
+          className={
+            // Room for the seat drawing
+            def.fields.some((f) => f.type === 'seats')
+              ? 'sm:max-w-4xl'
+              : 'sm:max-w-lg'
+          }
+        >
           <DialogHeader className='text-start'>
             <DialogTitle>
               {t(row ? 'resource.editTitle' : 'resource.addTitle', {

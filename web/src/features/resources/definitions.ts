@@ -175,7 +175,7 @@ export const resources = {
       {
         name: 'seats',
         label: 'field.seats',
-        type: 'json',
+        type: 'seats',
         placeholder:
           '[[{"name": "A01", "vertices": [[100, 300], [300, 300], [300, 500], [100, 500]]}]]',
         description: 'zones.seatsHint',

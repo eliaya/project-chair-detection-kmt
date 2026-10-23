@@ -315,7 +315,14 @@ export const en = {
     'Seating areas (polygons) on the camera image, and the tables and seats in them.',
   'zones.descPlaceholder': '2-seat tables (facing) × 4',
   'zones.seatsHint':
-    'Paste the output of draw_zones.py. One table = an array of seats; a seat = a name and a polygon of [x, y] pixel points on the camera image (3 or more). main.py reports seat j of table i as "<zone ID>_tii_sjj".',
+    'Choose a camera snapshot (python3 draw_zones.py --snapshot on the Pi, at the camera\'s resolution), click the corners of each seat, then Save. The polygons go into the JSON below, which can also be edited or pasted. One table = an array of seats; a seat = a name and a polygon of [x, y] pixel points on the camera image (3 or more). main.py reports seat j of table i as "<zone ID>_tii_sjj".',
+  'zones.snapshot': 'Camera snapshot',
+  'zones.prefix': 'Seat name prefix',
+  'zones.closeSeat': 'Finish seat',
+  'zones.nextTable': 'Next table',
+  'zones.undo': 'Undo',
+  'zones.drawing':
+    'Table {table} · {points} points (click the image to add corners)',
   'zones.count': '{tables} tables / {seats} seats',
 
   'thresholds.desc':
