@@ -1,0 +1,6 @@
+# The image takes only main.py, utils.py, config.json and requirements-pi.txt.
+*
+!main.py
+!utils.py
+!config.json
+!requirements-pi.txt

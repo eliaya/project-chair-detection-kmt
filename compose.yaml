@@ -1,0 +1,23 @@
+# main.py in Docker on the Pi. Set up by scripts/pi_initial.sh; afterwards:
+#   sudo docker compose up -d --build    # rebuild and restart after git pull
+#   sudo docker compose logs -f
+services:
+  occupancy:
+    build: .
+    image: kmt-occupancy
+    restart: unless-stopped
+    # API_TOKEN and CONFIG_URL, shared with the systemd setup (scripts/install_pi.sh)
+    env_file: /etc/kmt-occupancy.env
+    # $$: expanded by the container's shell from env_file, not by compose
+    command: ["sh", "-c", 'exec python /app/main.py --config "$$CONFIG_URL"']
+    # One line per camera registered for this Pi (its device path)
+    devices:
+      - /dev/video0:/dev/video0
+    ports:
+      - "8080:8080" # local dashboard
+    volumes:
+      - state:/data
+      - ./models:/data/models:ro # from scripts/export_model.sh
+
+volumes:
+  state:
