@@ -38,7 +38,7 @@
 - [ ] Raspberry Pi Imager で **Raspberry Pi OS Lite (64-bit)** を書き込み、ユーザー名・SSH を設定
 - [ ] `cat /etc/os-release` → `ID=debian`、`VERSION_CODENAME=trixie`
 - [ ] `dpkg --print-architecture` → `arm64`
-- [ ] USB カメラを接続し、`ls /dev/video0` で認識を確認
+- [ ] USB カメラを接続し、`ls /dev/video*` で認識を確認（番号は管理画面「カメラ」のデバイスパスと合わせる。カメラがなくてもコンテナは起動し、接続後に自動で読み始める）
 - [ ] `date` で時刻を確認。大きくずれていれば `sudo date -s '2026-10-23 10:00'`（オフラインでは NTP で合わない。ずれたままだと接続時に HTTPS の証明書検証に失敗する）
 
 ## D. インストール

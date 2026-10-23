@@ -10,14 +10,17 @@ services:
     env_file: /etc/kmt-occupancy.env
     # $$: expanded by the container's shell from env_file, not by compose
     command: ["sh", "-c", 'exec python /app/main.py --config "$$CONFIG_URL"']
-    # One line per camera registered for this Pi (its device path)
-    devices:
-      - /dev/video0:/dev/video0
+    # Every camera (/dev/videoN, any N), present at start or plugged in later: the host's /dev
+    # with access to V4L2 devices only (char major 81). With a "devices:" entry instead, a
+    # missing camera stops the container from starting; main.py itself retries a camera.
+    device_cgroup_rules:
+      - "c 81:* rmw"
     ports:
       - "8080:8080" # local dashboard
     volumes:
       - state:/data
       - ./models:/data/models:ro # from scripts/export_model.sh
+      - /dev:/dev
 
 volumes:
   state:

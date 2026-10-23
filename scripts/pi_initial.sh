@@ -339,7 +339,6 @@ start_container() {
   local -a missing=()
   [[ -f "$APP_DIR/$MODEL_PARAM" ]] \
     || missing+=("models/ (re-run this script, or scp -r models <pi>:${APP_DIR}/)")
-  [[ -e /dev/video0 ]] || missing+=("camera /dev/video0")
   grep -q '^API_TOKEN=.' "$ENV_FILE" || missing+=("API_TOKEN in ${ENV_FILE}")
   if ! grep -Eq '^CONFIG_URL=https?://' "$ENV_FILE" || grep -q '<worker>' "$ENV_FILE"; then
     missing+=("CONFIG_URL in ${ENV_FILE}")
@@ -350,6 +349,8 @@ start_container() {
   fi
   compose up -d
   log "Started: $(compose ps --format '{{.Name}} {{.Status}}')"
+  # Not fatal: main.py retries the camera and reports it to the admin UI
+  compgen -G '/dev/video*' >/dev/null || warn "No camera (/dev/video*) yet; plug it in, main.py picks it up"
 }
 
 summary() {
@@ -361,7 +362,7 @@ summary() {
 2. Logs: sudo docker compose logs -f   (in ${APP_DIR})
 3. Update: git pull, then sudo docker compose up -d --build
    (offline: re-run pi_initial.sh from a new bundle, then sudo docker compose up -d)
-4. Another camera: add its device to compose.yaml (devices)"
+4. Camera: any /dev/videoN, also plugged in later (set its path in the admin UI)"
   log "Done. docker: $(systemctl is-active docker), container: $(compose ps --format '{{.Status}}' | head -1)"
 }
 
