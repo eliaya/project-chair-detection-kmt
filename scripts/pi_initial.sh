@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
-# Raspberry Pi bootstrap: installs Docker CE and the Compose plugin, then builds main.py as the
-# kmt-occupancy image (Dockerfile, compose.yaml) and starts it
+# Raspberry Pi bootstrap: installs Docker CE, the Compose plugin and git, fetches the app,
+# exports the YOLO26n NCNN model if missing, then builds main.py as the kmt-occupancy image
+# (Dockerfile, compose.yaml) and starts it
 #
-# Usage (run as root from the cloned repo on the Pi):
-#   sudo bash scripts/pi_initial.sh
+# Usage (run as root; this file can be copied over on its own):
+#   scp scripts/pi_initial.sh <user>@<pi>:  &&  ssh -t <user>@<pi> sudo bash pi_initial.sh
+# Inside a checkout (scripts/pi_initial.sh next to compose.yaml) that checkout is used as is.
 #
 # Supports 64-bit Raspberry Pi OS (Debian 12 bookworm / 13 trixie, arm64). Docker's Raspberry Pi
 # OS page sends 64-bit installs to the Debian steps; 32-bit (armhf) is not supported here.
@@ -13,10 +15,22 @@
 #
 # Steps involving privileges or deletion (removing conflicting packages, docker group, stopping the
 # systemd service of scripts/install_pi.sh) all prompt via whiptail dialogs. Safe to re-run.
+#
+# Environment variables:
+#   APP_DIR=/data/docker/kmt-occupancy   # where the repo is cloned (asked when not inside a checkout)
+#   REPO_URL=https://github.com/eliaya/project-chair-detection-kmt.git
 
 set -Eeuo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_PARENT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -f "$SCRIPT_PARENT/compose.yaml" ]]; then
+  APP_DIR="${APP_DIR:-$SCRIPT_PARENT}"
+fi
+APP_DIR="${APP_DIR:-/data/docker/kmt-occupancy}"
+REPO_URL="${REPO_URL:-https://github.com/eliaya/project-chair-detection-kmt.git}"
+MODEL_PARAM=models/yolo26n_ncnn_model/model.ncnn.param
+# Ultralytics' Raspberry Pi image, used once to export the model (docs.ultralytics.com/guides/raspberry-pi/)
+EXPORT_IMAGE=ultralytics/ultralytics:latest-arm64
 ENV_FILE=/etc/kmt-occupancy.env
 OLD_UNIT=kmt-occupancy.service
 TITLE="KMT Pi Setup"
@@ -53,13 +67,12 @@ ui_password() {
 }
 
 compose() {
-  docker compose -f "$ROOT/compose.yaml" "$@"
+  docker compose -f "$APP_DIR/compose.yaml" "$@"
 }
 
 preflight() {
   [[ $EUID -eq 0 ]] || die "Run as root: sudo bash $0"
   [[ -t 0 && -t 1 ]] || die "An interactive terminal is required"
-  [[ -f "$ROOT/compose.yaml" && -f "$ROOT/main.py" ]] || die "Run from the cloned repo (no compose.yaml in ${ROOT})"
   [[ -r /etc/os-release ]] || die "/etc/os-release not found"
   # shellcheck source=/dev/null
   . /etc/os-release
@@ -86,11 +99,13 @@ Continue anyway?" || die "Cancelled"
 
   ui_yesno "This script will run on this host:
 
-  1. Install Docker CE and the Compose plugin (official apt repository)
+  1. Install Docker CE, the Compose plugin (official apt repository) and git
   2. Add login accounts to the docker group (will ask)
-  3. Write ${ENV_FILE} if missing (asks for the Worker URL and device token)
-  4. Stop the systemd service of install_pi.sh if present (will ask)
-  5. Build main.py as the kmt-occupancy image and start it
+  3. Clone the app into ${APP_DIR} if it is not there (will ask)
+  4. Export the YOLO26n NCNN model if models/ is missing (will ask)
+  5. Write ${ENV_FILE} if missing (asks for the Worker URL and device token)
+  6. Stop the systemd service of install_pi.sh if present (will ask)
+  7. Build main.py as the kmt-occupancy image and start it
 
 Continue?" || die "Cancelled"
 }
@@ -119,7 +134,7 @@ Remove them?" || die "Conflicting packages not removed; cannot install Docker CE
 install_docker() {
   log "Configuring the official Docker apt repository..."
   apt-get update
-  apt-get install -y ca-certificates curl
+  apt-get install -y ca-certificates curl git
   install -m 0755 -d /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
   chmod a+r /etc/apt/keyrings/docker.asc
@@ -158,6 +173,53 @@ If none are needed, just press OK:" 20 78 10 "${items[@]}" 3>&1 1>&2 2>&3)" || r
     usermod -aG docker "$name"
     log "Added ${name} to the docker group (takes effect after re-login)"
   done <<<"$selected"
+}
+
+fetch_app() {
+  if [[ -f "$APP_DIR/compose.yaml" ]]; then
+    log "Using the app in ${APP_DIR}"
+    return 0
+  fi
+  APP_DIR="$(ui_input "Directory to clone the app into:" "$APP_DIR")"
+  if [[ -f "$APP_DIR/compose.yaml" ]]; then
+    log "Using the app in ${APP_DIR}"
+    return 0
+  fi
+  [[ ! -e "$APP_DIR" || -z "$(ls -A "$APP_DIR")" ]] \
+    || die "${APP_DIR} exists, is not empty and has no compose.yaml; choose another directory or empty it"
+  local url
+  url="$(ui_input "Git repository of the app (a private repo asks for credentials, e.g. a GitHub token):" "$REPO_URL")"
+  install -d -m 0755 "$(dirname "$APP_DIR")"
+  git clone "$url" "$APP_DIR" || die "git clone failed. Alternatively copy the repo from the dev PC:
+  rsync -a --exclude node_modules --exclude '.venv*' ./ <user>@<pi>:${APP_DIR}/
+and re-run: sudo bash ${APP_DIR}/scripts/pi_initial.sh"
+  [[ -f "$APP_DIR/compose.yaml" ]] || die "${url} has no compose.yaml (push the latest main first)"
+  log "Cloned ${url} into ${APP_DIR}"
+}
+
+# models/ is not in git; scripts/export_model.sh on a dev PC does the same
+export_model() {
+  if [[ -f "$APP_DIR/$MODEL_PARAM" ]]; then
+    log "Model found: ${MODEL_PARAM}"
+    return 0
+  fi
+  ui_yesno "${APP_DIR}/models/ has no YOLO26n NCNN model.
+
+Export it on this Pi with Ultralytics' image ${EXPORT_IMAGE}?
+It downloads about 1 GB and yolo26n.pt, and takes several minutes.
+The image is removed afterwards.
+
+No: copy models/ from the dev PC later (scripts/export_model.sh)." || {
+    warn "Model not exported"
+    return 0
+  }
+  install -d -m 0755 "$APP_DIR/models"
+  docker run --rm --ipc=host -v "$APP_DIR/models:/models" -w /models "$EXPORT_IMAGE" \
+    yolo export model=yolo26n.pt format=ncnn imgsz=640
+  rm -f "$APP_DIR/models/yolo26n.pt"
+  docker image rm "$EXPORT_IMAGE" >/dev/null || true
+  [[ -f "$APP_DIR/$MODEL_PARAM" ]] || die "Export finished without ${MODEL_PARAM}"
+  log "Exported ${MODEL_PARAM}"
 }
 
 # Same file as the systemd setup (install_pi.sh): API_TOKEN and CONFIG_URL
@@ -199,8 +261,8 @@ build_image() {
 
 start_container() {
   local -a missing=()
-  [[ -f "$ROOT/models/yolo26n_ncnn_model/model.ncnn.param" ]] \
-    || missing+=("models/ (scripts/export_model.sh on the dev PC, then scp -r models <pi>:${ROOT}/)")
+  [[ -f "$APP_DIR/$MODEL_PARAM" ]] \
+    || missing+=("models/ (re-run this script, or scp -r models <pi>:${APP_DIR}/)")
   [[ -e /dev/video0 ]] || missing+=("camera /dev/video0")
   grep -q '^API_TOKEN=.' "$ENV_FILE" || missing+=("API_TOKEN in ${ENV_FILE}")
   if ! grep -Eq '^CONFIG_URL=https?://' "$ENV_FILE" || grep -q '<worker>' "$ENV_FILE"; then
@@ -219,8 +281,8 @@ summary() {
 
 1. If not started yet: copy models/ from the dev PC and fill in ${ENV_FILE}
    (sudo nano ${ENV_FILE}), then
-   cd ${ROOT} && sudo docker compose up -d
-2. Logs: sudo docker compose logs -f   (in ${ROOT})
+   cd ${APP_DIR} && sudo docker compose up -d
+2. Logs: sudo docker compose logs -f   (in ${APP_DIR})
 3. After git pull: sudo docker compose up -d --build
 4. Another camera: add its device to compose.yaml (devices)"
   log "Done. docker: $(systemctl is-active docker), container: $(compose ps --format '{{.Status}}' | head -1)"
@@ -231,6 +293,8 @@ main() {
   remove_conflicting_packages
   install_docker
   grant_docker_access
+  fetch_app
+  export_model
   write_env_file
   stop_systemd_service
   build_image

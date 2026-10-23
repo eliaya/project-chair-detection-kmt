@@ -36,7 +36,7 @@ USB カメラ → Raspberry Pi（main.py） ──数値データ──▶ Cloud
 | `draw_zones.py`              | カメラ画像の保存（`--snapshot`）。座席の多角形は管理画面「ゾーン」でその画像の上に描いて保存 |
 | `config.json`                | 管理画面から設定を取得できないときのフォールバック                             |
 | `scripts/`                   | モデル変換（`export_model.sh`）、Pi のセットアップ（Docker: `pi_initial.sh`／venv + systemd: `install_pi.sh`）、開発用の起動 |
-| `Dockerfile`, `compose.yaml` | Pi で main.py を Docker コンテナとして動かす（`sudo bash scripts/pi_initial.sh` で Docker CE の導入・ビルド・起動） |
+| `Dockerfile`, `compose.yaml` | Pi で main.py を Docker コンテナとして動かす（`pi_initial.sh` 単体を Pi にコピーして `sudo bash pi_initial.sh`：Docker CE・Compose・git の導入、リポジトリの clone、モデルの書き出し、ビルド・起動） |
 | `deploy/`                    | systemd ユニット（Pi の自動起動・自動再起動）                                  |
 | `web/`                       | 管理画面と API（Cloudflare Workers + D1）。詳細は [web/README.md](web/README.md) |
 | `docs/`                      | 研究計画                                                                       |
