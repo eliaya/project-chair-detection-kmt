@@ -1,6 +1,7 @@
-# The image takes only main.py, utils.py, config.json and requirements-pi.txt.
+# The image takes only these; the offline bundle's wheels come in as a separate build context.
 *
 !main.py
 !utils.py
+!draw_zones.py
 !config.json
 !requirements-pi.txt

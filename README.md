@@ -37,7 +37,8 @@ USB カメラ → Raspberry Pi（main.py） ──数値データ──▶ Cloud
 | `config.json`                | 管理画面から設定を取得できないときのフォールバック                             |
 | `scripts/`                   | モデル変換（`export_model.sh`）、Pi のセットアップ（Docker: `pi_initial.sh`／venv + systemd: `install_pi.sh`）、開発用の起動 |
 | `Dockerfile`, `compose.yaml` | Pi で main.py を Docker コンテナとして動かす（`pi_initial.sh` 単体を Pi にコピーして `sudo bash pi_initial.sh`：Docker CE・Compose・git の導入、リポジトリの clone、モデルの書き出し、ビルド・起動） |
-| `deploy/`                    | systemd ユニット（Pi の自動起動・自動再起動）                                  |
+| `deploy/`                    | systemd ユニット（Pi の自動起動・自動再起動）、オフライン導入チェックリスト（`pi-bundle/CHECKLIST.md`） |
+| `scripts/build_pi_bundle.py` | Pi のオフライン導入パッケージ（Docker・ベースイメージ・wheel・モデル・アプリ）を `dist/kmt-pi-bundle/` に作成 |
 | `web/`                       | 管理画面と API（Cloudflare Workers + D1）。詳細は [web/README.md](web/README.md) |
 | `docs/`                      | 研究計画                                                                       |
 | `archived/`                  | 過去の実験コード（メイク除去など）                                             |

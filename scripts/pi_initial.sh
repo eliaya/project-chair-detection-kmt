@@ -7,6 +7,8 @@
 # Usage (run as root; this file can be copied over on its own):
 #   scp scripts/pi_initial.sh <user>@<pi>:  &&  ssh -t <user>@<pi> sudo bash pi_initial.sh
 # Inside a checkout (scripts/pi_initial.sh next to compose.yaml) that checkout is used as is.
+# Offline: run it from the bundle made by scripts/build_pi_bundle.py (CHECKLIST.md there);
+# Docker, the base image, wheels, the app and the model then all come from the bundle.
 #
 # Supports 64-bit Raspberry Pi OS (Debian 12 bookworm / 13 trixie, arm64). Docker's Raspberry Pi
 # OS page sends 64-bit installs to the Debian steps; 32-bit (armhf) is not supported here.
@@ -22,7 +24,12 @@
 
 set -Eeuo pipefail
 
-SCRIPT_PARENT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PARENT="$(dirname "$SCRIPT_DIR")"
+OFFLINE=0
+if [[ -f "$SCRIPT_DIR/debs/Packages" && -f "$SCRIPT_DIR/app/compose.yaml" ]]; then
+  OFFLINE=1
+fi
 if [[ -f "$SCRIPT_PARENT/compose.yaml" ]]; then
   APP_DIR="${APP_DIR:-$SCRIPT_PARENT}"
 fi
@@ -31,10 +38,15 @@ REPO_URL="${REPO_URL:-https://github.com/eliaya/project-chair-detection-kmt.git}
 MODEL_PARAM=models/yolo26n_ncnn_model/model.ncnn.param
 # Ultralytics' Raspberry Pi image, used once to export the model (docs.ultralytics.com/guides/raspberry-pi/)
 EXPORT_IMAGE=ultralytics/ultralytics:latest-arm64
+BASE_IMAGE=python:3.13-slim-trixie   # FROM in the Dockerfile; images/ in the bundle
+APT_LIST=""
+APT_OPTS=()
 ENV_FILE=/etc/kmt-occupancy.env
 OLD_UNIT=kmt-occupancy.service
 TITLE="KMT Pi Setup"
 export DEBIAN_FRONTEND=noninteractive
+
+trap 'if [[ -n "$APT_LIST" ]]; then rm -f "$APT_LIST"; fi' EXIT
 
 log() {
   printf '[pi-initial] %s\n' "$*"
@@ -66,6 +78,11 @@ ui_password() {
   whiptail --title "$TITLE" --passwordbox "$1" 12 78 3>&1 1>&2 2>&3 || die "Cancelled"
 }
 
+# Offline, apt sees only the bundle's debs/ (no network); online, the normal sources
+apt_get() {
+  apt-get "${APT_OPTS[@]}" "$@"
+}
+
 compose() {
   docker compose -f "$APP_DIR/compose.yaml" "$@"
 }
@@ -80,10 +97,21 @@ preflight() {
   [[ "$(dpkg --print-architecture)" == "arm64" ]] \
     || die "Only arm64 is supported, detected: $(dpkg --print-architecture). Use the 64-bit Raspberry Pi OS"
 
+  if ((OFFLINE)); then
+    [[ "${VERSION_CODENAME:-}" == "trixie" ]] \
+      || die "The bundle is for Raspberry Pi OS trixie (Debian 13), detected: ${PRETTY_NAME:-unknown}"
+    [[ "$SCRIPT_DIR" != *" "* ]] || die "Move the bundle to a path without spaces (apt file: URI): ${SCRIPT_DIR}"
+    APT_LIST="$(mktemp)"
+    printf 'deb [trusted=yes] file:%s/debs ./\n' "$SCRIPT_DIR" >"$APT_LIST"
+    APT_OPTS=(-o "Dir::Etc::SourceList=${APT_LIST}" -o Dir::Etc::SourceParts=- -o APT::Get::List-Cleanup=0)
+    log "Offline bundle: $(head -1 "$SCRIPT_DIR/VERSION" 2>/dev/null)"
+    apt_get update
+  fi
+
   if ! command -v whiptail >/dev/null 2>&1; then
     log "Installing whiptail (interactive dialogs)..."
-    apt-get update
-    apt-get install -y whiptail
+    ((OFFLINE)) || apt_get update
+    apt_get install -y whiptail
   fi
 
   case "${VERSION_CODENAME:-}" in
@@ -97,11 +125,15 @@ Continue anyway?" || die "Cancelled"
       ;;
   esac
 
+  local source="the official apt repository, and git" app="Clone the app into ${APP_DIR} if it is not there"
+  if ((OFFLINE)); then
+    source="this bundle, offline" app="Copy the app and model from this bundle (asks for the directory)"
+  fi
   ui_yesno "This script will run on this host:
 
-  1. Install Docker CE, the Compose plugin (official apt repository) and git
+  1. Install Docker CE and the Compose plugin (${source})
   2. Add login accounts to the docker group (will ask)
-  3. Clone the app into ${APP_DIR} if it is not there (will ask)
+  3. ${app}
   4. Export the YOLO26n NCNN model if models/ is missing (will ask)
   5. Write ${ENV_FILE} if missing (asks for the Worker URL and device token)
   6. Stop the systemd service of install_pi.sh if present (will ask)
@@ -132,6 +164,20 @@ Remove them?" || die "Conflicting packages not removed; cannot install Docker CE
 }
 
 install_docker() {
+  if ((OFFLINE)); then
+    log "Installing Docker CE from the bundle (debs/)..."
+    apt_get install -y --no-install-recommends \
+      docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  else
+    install_docker_online
+  fi
+  systemctl enable --now docker
+  # docker info, not hello-world: that needs Docker Hub
+  docker info >/dev/null
+  log "Docker $(docker version --format '{{.Server.Version}}'), Compose $(docker compose version --short) ready"
+}
+
+install_docker_online() {
   log "Configuring the official Docker apt repository..."
   apt-get update
   apt-get install -y ca-certificates curl git
@@ -150,9 +196,6 @@ EOF
   log "Installing Docker CE..."
   apt-get update
   apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-  systemctl enable --now docker
-  docker run --rm hello-world >/dev/null
-  log "Docker $(docker version --format '{{.Server.Version}}'), Compose $(docker compose version --short) ready"
 }
 
 grant_docker_access() {
@@ -175,7 +218,28 @@ If none are needed, just press OK:" 20 78 10 "${items[@]}" 3>&1 1>&2 2>&3)" || r
   done <<<"$selected"
 }
 
+# Offline: the bundle's app/ (code, models/, wheels/) is copied over; state stays in the volume
+copy_bundle_app() {
+  APP_DIR="$(ui_input "Directory to install the app into:" "$APP_DIR")"
+  if [[ -f "$APP_DIR/compose.yaml" ]]; then
+    ui_yesno "${APP_DIR} already has the app. Overwrite its files with this bundle's?
+(${ENV_FILE} and the container's data volume are kept.)" || {
+      log "Keeping the app in ${APP_DIR}"
+      return 0
+    }
+  elif [[ -e "$APP_DIR" && -n "$(ls -A "$APP_DIR")" ]]; then
+    die "${APP_DIR} exists, is not empty and has no compose.yaml; choose another directory or empty it"
+  fi
+  install -d -m 0755 "$APP_DIR"
+  cp -a "$SCRIPT_DIR/app/." "$APP_DIR/"
+  log "Copied the bundle's app into ${APP_DIR}"
+}
+
 fetch_app() {
+  if ((OFFLINE)); then
+    copy_bundle_app
+    return 0
+  fi
   if [[ -f "$APP_DIR/compose.yaml" ]]; then
     log "Using the app in ${APP_DIR}"
     return 0
@@ -201,6 +265,10 @@ and re-run: sudo bash ${APP_DIR}/scripts/pi_initial.sh"
 export_model() {
   if [[ -f "$APP_DIR/$MODEL_PARAM" ]]; then
     log "Model found: ${MODEL_PARAM}"
+    return 0
+  fi
+  if ((OFFLINE)); then
+    warn "No model in the bundle; rebuild it (scripts/build_pi_bundle.py) or scp -r models <pi>:${APP_DIR}/"
     return 0
   fi
   ui_yesno "${APP_DIR}/models/ has no YOLO26n NCNN model.
@@ -253,7 +321,15 @@ Stop and disable it? (The unit file is kept; re-enable with
 
 build_image() {
   log "Building the kmt-occupancy image..."
-  compose build
+  if ((OFFLINE)); then
+    docker image inspect "$BASE_IMAGE" >/dev/null 2>&1 \
+      || docker load -i "$SCRIPT_DIR/images/${BASE_IMAGE//[:]/-}.tar"
+    # The wheels context replaces the Dockerfile's wheels stage; --no-index keeps pip off PyPI
+    docker build --build-context wheels="$APP_DIR/wheels" --build-arg PIP_OPTS=--no-index \
+      -t kmt-occupancy "$APP_DIR"
+  else
+    compose build
+  fi
   # The image alone: compose run would need the camera device present
   docker run --rm kmt-occupancy python -c "import cv2, ncnn, numpy"
   log "Image ready: $(docker image inspect kmt-occupancy --format '{{.Id}}' | cut -c1-19)"
@@ -283,7 +359,8 @@ summary() {
    (sudo nano ${ENV_FILE}), then
    cd ${APP_DIR} && sudo docker compose up -d
 2. Logs: sudo docker compose logs -f   (in ${APP_DIR})
-3. After git pull: sudo docker compose up -d --build
+3. Update: git pull, then sudo docker compose up -d --build
+   (offline: re-run pi_initial.sh from a new bundle, then sudo docker compose up -d)
 4. Another camera: add its device to compose.yaml (devices)"
   log "Done. docker: $(systemctl is-active docker), container: $(compose ps --format '{{.Status}}' | head -1)"
 }

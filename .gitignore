@@ -3,6 +3,8 @@ __pycache__/
 .venv*/
 # Exported by scripts/export_model.sh, copied to each Pi
 models/
+# Offline Pi bundle (scripts/build_pi_bundle.py)
+dist/
 # Runtime state of main.py
 queue.db
 config.cache.json
