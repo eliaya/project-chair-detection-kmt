@@ -17,7 +17,7 @@
 # systemd service of scripts/install_pi.sh) all prompt via whiptail dialogs. Safe to re-run.
 #
 # Environment variables:
-#   APP_DIR=/data/docker/kmt-occupancy   # where the repo is cloned (asked when not inside a checkout)
+#   APP_DIR=/data/docker/apps/kmt-occupancy   # where the repo is cloned (asked when not inside a checkout)
 #   REPO_URL=https://github.com/eliaya/project-chair-detection-kmt.git
 
 set -Eeuo pipefail
@@ -26,7 +26,7 @@ SCRIPT_PARENT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [[ -f "$SCRIPT_PARENT/compose.yaml" ]]; then
   APP_DIR="${APP_DIR:-$SCRIPT_PARENT}"
 fi
-APP_DIR="${APP_DIR:-/data/docker/kmt-occupancy}"
+APP_DIR="${APP_DIR:-/data/docker/apps/kmt-occupancy}"
 REPO_URL="${REPO_URL:-https://github.com/eliaya/project-chair-detection-kmt.git}"
 MODEL_PARAM=models/yolo26n_ncnn_model/model.ncnn.param
 # Ultralytics' Raspberry Pi image, used once to export the model (docs.ultralytics.com/guides/raspberry-pi/)
