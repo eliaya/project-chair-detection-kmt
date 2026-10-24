@@ -1,5 +1,10 @@
 # 変更履歴
 
+## v0.1.0 (2026-10-24)
+
+- 版番号を v0.1.0 から振り直し（内容は v1.7.0 と同じ）。以下の v1.2.0〜v1.7.0 は旧番号の履歴で、タグもそのまま残す
+- GitHub Release に Pi のオフライン導入パッケージ（`kmt-pi-bundle-v0.1.0.tar.gz`）を添付
+
 ## v1.7.0 (2026-10-24)
 
 - Pi の設定ファイルを `/etc/kmt-occupancy.env` からアプリのディレクトリ内の `conf/kmt-occupancy.env`（既定 `/data/docker/apps/kmt-occupancy/conf/`）に移動。ホストの `/etc` には何も置かない。`conf/` は git の対象外
