@@ -4,7 +4,7 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type ColumnDef } from '@tanstack/react-table'
 import { type I18n, type Key, useI18n } from '@/i18n'
-import { KeyRound, Pencil, Plus, Trash2 } from 'lucide-react'
+import { KeyRound, Pencil, Plus, Trash2, Video } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, listQuery } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,7 @@ import { PageShell } from '@/components/layout/page-shell'
 import { CopyBlock, type Device, DeviceConnection } from './connection'
 import { DataTable } from './data-table'
 import { type Field, FieldsForm } from './fields-form'
+import { LiveView } from './live-view'
 
 type Row = Record<string, unknown> & { id: string | number }
 
@@ -57,9 +58,14 @@ export type ResourceDef = {
   rotateDesc?: Key
   // Polls the list, for live statuses
   refetchInterval?: number
+  // Adds "live view" for cameras (rows carry device_id and the device's lan_url)
+  liveView?: boolean
 }
 
-type DialogState = { type: 'form' | 'delete' | 'rotate'; row?: Row } | null
+type DialogState = {
+  type: 'form' | 'delete' | 'rotate' | 'live'
+  row?: Row
+} | null
 
 export function ResourcePage({ def }: { def: ResourceDef }) {
   const queryClient = useQueryClient()
@@ -123,6 +129,13 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
+            {def.liveView && (
+              <DropdownMenuItem
+                onClick={() => setDialog({ type: 'live', row: row.original })}
+              >
+                <Video /> {t('live.open')}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => setDialog({ type: 'form', row: row.original })}
             >
@@ -236,6 +249,25 @@ export function ResourcePage({ def }: { def: ResourceDef }) {
           handleConfirm={() => rotate.mutate(row)}
         />
       )}
+
+      <Dialog
+        open={dialog?.type === 'live'}
+        onOpenChange={(open) => !open && setDialog(null)}
+      >
+        <DialogContent className='sm:max-w-4xl'>
+          <DialogHeader className='text-start'>
+            <DialogTitle>{t('live.title', { camera: label })}</DialogTitle>
+            <DialogDescription>{t('live.legend')}</DialogDescription>
+          </DialogHeader>
+          {dialog?.type === 'live' && row && (
+            <LiveView
+              camera={String(row.id)}
+              device={String(row.device_id ?? '')}
+              lanUrl={String(row.lan_url ?? '')}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!token} onOpenChange={(open) => !open && setToken(null)}>
         <DialogContent>

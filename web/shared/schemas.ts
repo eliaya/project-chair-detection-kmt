@@ -37,7 +37,16 @@ export const adminUpdateSchema = adminCreateSchema.extend({
   password: z.union([z.literal(''), password]).optional(),
 })
 
-export const deviceSchema = z.object({ id, name })
+// lan_url: the Pi's local dashboard (no path), for the live view; '' when not set.
+export const deviceSchema = z.object({
+  id,
+  name,
+  lan_url: z
+    .string()
+    .trim()
+    .regex(/^(https?:\/\/[^\s/?#]+)?$/, 'validation.lanUrl')
+    .default(''),
+})
 
 // A third-party program calling /api/v1/*.
 export const apiKeySchema = z.object({ name: name.min(1) })

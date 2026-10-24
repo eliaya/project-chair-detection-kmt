@@ -77,6 +77,7 @@ export const ja: Dict = {
   'field.apiKey': 'API キー',
   'field.lastSeen': '最終通信',
   'field.devicePath': 'デバイスパス',
+  'field.lanUrl': 'LAN 内の URL',
   'field.fps': 'FPS',
   'field.width': '幅 (px)',
   'field.height': '高さ (px)',
@@ -92,6 +93,7 @@ export const ja: Dict = {
   'validation.setupCodeRequired': 'Setup code を入力してください',
   'validation.siteNameRequired': 'サイト名を入力してください',
   'validation.devicePath': '/dev/videoN 形式',
+  'validation.lanUrl': 'http://<アドレス>:<ポート> 形式（パスなし）',
   'validation.verticesMin': '3点以上',
   'validation.json': 'JSON 形式が正しくありません',
 
@@ -271,6 +273,8 @@ export const ja: Dict = {
   'devices.desc':
     'Raspberry Pi などのエッジ端末です。作成時に API トークンを発行します。',
   'devices.namePlaceholder': '店舗A 入口側',
+  'devices.lanUrlHint':
+    '店内ネットワークでの Pi のアドレス（例: http://192.168.1.20:8080）。「カメラ」のライブ映像で使います。',
   'apiKeys.desc':
     '外部プログラムが REST API（/api/v1）で稼働履歴を取得するためのキーです。仕様: /api/v1/openapi.json',
   'apiKeys.namePlaceholder': 'POS 連携',
@@ -279,6 +283,15 @@ export const ja: Dict = {
   'apiKeys.rotateDesc':
     '「{label}」の現在のキーはすぐに使えなくなります。利用しているプログラムの設定を更新してください。',
   'cameras.desc': '各デバイスに接続された USB カメラです。',
+  'live.open': 'ライブ映像',
+  'live.title': 'ライブ映像: {camera}',
+  'live.legend':
+    '座席: 赤＝着席、緑＝空席、橙＝確認中。白枠＝追跡中の人物と追跡 ID（スタッフ・通行人は除外）。約 1 秒ごとに更新。',
+  'live.noUrl':
+    '先に「デバイス」でデバイス {device} の LAN 内の URL を入力してください。',
+  'live.failed':
+    '{url} から映像を読み込めません。ライブ映像は Pi と同じネットワークのブラウザからのみ表示できます。ローカルネットワークへのアクセスを求められたら許可してください。',
+  'live.openPi': 'Pi のページで開く',
   'floorplan.desc': '店内の壁と、テーブル・椅子の配置です。',
   'floorplan.walls': '壁',
   'floorplan.layout': '配置',

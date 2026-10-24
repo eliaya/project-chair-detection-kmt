@@ -77,6 +77,7 @@ export const zhTW: Dict = {
   'field.apiKey': 'API 金鑰',
   'field.lastSeen': '最後連線',
   'field.devicePath': '裝置路徑',
+  'field.lanUrl': '區網 URL',
   'field.fps': 'FPS',
   'field.width': '寬度 (px)',
   'field.height': '高度 (px)',
@@ -93,6 +94,7 @@ export const zhTW: Dict = {
   'validation.setupCodeRequired': '請輸入 Setup code',
   'validation.siteNameRequired': '請輸入站點名稱',
   'validation.devicePath': '格式須為 /dev/videoN',
+  'validation.lanUrl': '格式須為 http://<位址>:<埠>（不含路徑）',
   'validation.verticesMin': '至少 3 個點',
   'validation.json': 'JSON 格式不正確',
 
@@ -262,6 +264,8 @@ export const zhTW: Dict = {
     '半形英數字與符號，至少 8 個字元。編輯時留空則不變更。',
   'devices.desc': 'Raspberry Pi 等邊緣裝置。建立時會發行 API 權杖。',
   'devices.namePlaceholder': 'A 店 入口側',
+  'devices.lanUrlHint':
+    'Pi 在店內網路的位址（例：http://192.168.1.20:8080），供「攝影機」頁的即時影像使用。',
   'apiKeys.desc':
     '供第三方程式透過 REST API（/api/v1）取得使用歷史的金鑰。規格：/api/v1/openapi.json',
   'apiKeys.namePlaceholder': 'POS 串接',
@@ -270,6 +274,14 @@ export const zhTW: Dict = {
   'apiKeys.rotateDesc':
     '「{label}」目前的金鑰將立即失效，請更新使用它的程式設定。',
   'cameras.desc': '連接到各裝置的 USB 攝影機。',
+  'live.open': '即時影像',
+  'live.title': '即時影像：{camera}',
+  'live.legend':
+    '座位：紅＝有人、綠＝空位、橘＝確認中。白框＝追蹤中的人物與追蹤 ID（不含店員、路人）。約每秒更新一次。',
+  'live.noUrl': '請先在「裝置」頁輸入裝置 {device} 的區網 URL。',
+  'live.failed':
+    '無法從 {url} 載入影像。即時影像只能在與 Pi 同一網路的瀏覽器上顯示。若瀏覽器要求存取區域網路裝置，請允許。',
+  'live.openPi': '在 Pi 的頁面開啟',
   'floorplan.desc': '店內的牆面，以及桌椅的配置。',
   'floorplan.walls': '牆面',
   'floorplan.layout': '配置',

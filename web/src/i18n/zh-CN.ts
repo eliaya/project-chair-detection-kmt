@@ -77,6 +77,7 @@ export const zhCN: Dict = {
   'field.apiKey': 'API 密钥',
   'field.lastSeen': '最后连接',
   'field.devicePath': '设备路径',
+  'field.lanUrl': '局域网 URL',
   'field.fps': 'FPS',
   'field.width': '宽度 (px)',
   'field.height': '高度 (px)',
@@ -93,6 +94,7 @@ export const zhCN: Dict = {
   'validation.setupCodeRequired': '请输入 Setup code',
   'validation.siteNameRequired': '请输入站点名称',
   'validation.devicePath': '格式须为 /dev/videoN',
+  'validation.lanUrl': '格式须为 http://<地址>:<端口>（不含路径）',
   'validation.verticesMin': '至少 3 个点',
   'validation.json': 'JSON 格式不正确',
 
@@ -262,6 +264,8 @@ export const zhCN: Dict = {
     '半角字母、数字和符号，至少 8 个字符。编辑时留空则不修改。',
   'devices.desc': 'Raspberry Pi 等边缘设备。创建时会签发 API 令牌。',
   'devices.namePlaceholder': 'A 店 入口侧',
+  'devices.lanUrlHint':
+    'Pi 在店内网络的地址（例：http://192.168.1.20:8080），供“摄像头”页的实时画面使用。',
   'apiKeys.desc':
     '供第三方程序通过 REST API（/api/v1）获取使用历史的密钥。规格：/api/v1/openapi.json',
   'apiKeys.namePlaceholder': 'POS 对接',
@@ -270,6 +274,14 @@ export const zhCN: Dict = {
   'apiKeys.rotateDesc':
     '“{label}”当前的密钥将立即失效，请更新使用它的程序配置。',
   'cameras.desc': '连接到各设备的 USB 摄像头。',
+  'live.open': '实时画面',
+  'live.title': '实时画面：{camera}',
+  'live.legend':
+    '座位：红＝有人、绿＝空位、橙＝确认中。白框＝跟踪中的人物与跟踪 ID（不含店员、路人）。约每秒更新一次。',
+  'live.noUrl': '请先在“设备”页输入设备 {device} 的局域网 URL。',
+  'live.failed':
+    '无法从 {url} 加载画面。实时画面只能在与 Pi 同一网络的浏览器上显示。若浏览器请求访问局域网设备，请允许。',
+  'live.openPi': '在 Pi 的页面打开',
   'floorplan.desc': '店内的墙面，以及桌椅的布局。',
   'floorplan.walls': '墙面',
   'floorplan.layout': '布局',

@@ -78,6 +78,7 @@ export const en = {
   'field.apiKey': 'API key',
   'field.lastSeen': 'Last seen',
   'field.devicePath': 'Device path',
+  'field.lanUrl': 'LAN URL',
   'field.fps': 'FPS',
   'field.width': 'Width (px)',
   'field.height': 'Height (px)',
@@ -94,6 +95,7 @@ export const en = {
   'validation.setupCodeRequired': 'Please enter the setup code',
   'validation.siteNameRequired': 'Please enter a site name',
   'validation.devicePath': 'Must be /dev/videoN',
+  'validation.lanUrl': 'Must be http://<address>:<port>, without a path',
   'validation.verticesMin': 'At least 3 points',
   'validation.json': 'Invalid JSON',
 
@@ -275,6 +277,8 @@ export const en = {
   'devices.desc':
     'Edge devices such as a Raspberry Pi. An API token is issued when one is created.',
   'devices.namePlaceholder': 'Store A, entrance side',
+  'devices.lanUrlHint':
+    'The Pi on the store network, e.g. http://192.168.1.20:8080. Used by the live view on the Cameras page.',
   'apiKeys.desc':
     'Keys for third-party programs that read the occupancy history over the REST API (/api/v1). Spec: /api/v1/openapi.json',
   'apiKeys.namePlaceholder': 'POS integration',
@@ -283,6 +287,15 @@ export const en = {
   'apiKeys.rotateDesc':
     'The current key of "{label}" stops working immediately. Update it in the program that uses it.',
   'cameras.desc': 'USB cameras connected to each device.',
+  'live.open': 'Live view',
+  'live.title': 'Live view: {camera}',
+  'live.legend':
+    'Seats: red occupied, green empty, orange confirming. White boxes: tracked persons with track ID (staff and passers-by excluded). About one frame per second.',
+  'live.noUrl':
+    'Enter the LAN URL of device {device} on the Devices page first.',
+  'live.failed':
+    'Cannot load the stream from {url}. The live view works only from a browser on the same network as the Pi. If the browser asks for access to devices on the local network, allow it.',
+  'live.openPi': 'Open on the Pi',
   'floorplan.desc': 'Room walls and the layout of tables and chairs.',
   'floorplan.walls': 'Walls',
   'floorplan.layout': 'Layout',

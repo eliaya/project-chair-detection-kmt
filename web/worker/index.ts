@@ -235,6 +235,7 @@ type DeviceRow = {
   last_seen_at: string | null
   config_fetched_at: string | null
   health: string | Health | null
+  lan_url?: string
 }
 
 // Judged on the Worker clock, so a skewed browser or Pi clock does not matter.
@@ -266,7 +267,7 @@ const withStatus = (row: Record<string, unknown>, now = Date.now()) => {
 
 async function devicesById(env: Env) {
   const { results } = await env.DB.prepare(
-    'SELECT id, last_seen_at, config_fetched_at, health FROM devices'
+    'SELECT id, last_seen_at, config_fetched_at, health, lan_url FROM devices'
   ).all<DeviceRow>()
   return new Map(
     results.map((d) => [d.id, withStatus(d) as unknown as DeviceRow])
@@ -274,7 +275,8 @@ async function devicesById(env: Env) {
 }
 
 async function devices(req: Request, env: Env, id?: string, action?: string) {
-  const cols = 'id, name, last_seen_at, config_fetched_at, health, created_at'
+  const cols =
+    'id, name, lan_url, last_seen_at, config_fetched_at, health, created_at'
   if (!id && req.method === 'GET') {
     const { results } = await env.DB.prepare(
       `SELECT ${cols} FROM devices ORDER BY id`
@@ -285,9 +287,9 @@ async function devices(req: Request, env: Env, id?: string, action?: string) {
     const d = await body(req, deviceSchema)
     const token = randomToken()
     const row = await env.DB.prepare(
-      `INSERT INTO devices (id, name, token_hash) VALUES (?, ?, ?) RETURNING ${cols}`
+      `INSERT INTO devices (id, name, lan_url, token_hash) VALUES (?, ?, ?, ?) RETURNING ${cols}`
     )
-      .bind(d.id, d.name, await sha256(token))
+      .bind(d.id, d.name, d.lan_url, await sha256(token))
       .first()
     // The plain token is returned only here and on rotation.
     return json({ ...withStatus(row!), token }, 201)
@@ -305,9 +307,9 @@ async function devices(req: Request, env: Env, id?: string, action?: string) {
   if (id && !action && req.method === 'PUT') {
     const d = await body(req, deviceSchema)
     const row = await env.DB.prepare(
-      `UPDATE devices SET name = ? WHERE id = ? RETURNING ${cols}`
+      `UPDATE devices SET name = ?, lan_url = ? WHERE id = ? RETURNING ${cols}`
     )
-      .bind(d.name, id)
+      .bind(d.name, d.lan_url, id)
       .first()
     if (!row) throw new HttpError(404, 'Not Found')
     return json(withStatus(row))
@@ -400,6 +402,8 @@ async function crud(
       rows.map((c) => ({
         ...c,
         status: cameraStatus(c.id as string, devs.get(c.device_id as string), now),
+        // For the live view (src/features/resources/live-view.tsx)
+        lan_url: devs.get(c.device_id as string)?.lan_url ?? '',
       }))
     )
   }
