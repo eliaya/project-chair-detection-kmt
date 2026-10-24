@@ -365,8 +365,8 @@ summary() {
    the device token (admin UI: Devices). main.py restarts with them.
    If not started yet: copy models/ from the dev PC, then cd ${APP_DIR} && docker compose up -d
 2. Logs: docker compose logs -f   (in ${APP_DIR})
-3. Update: sudo git pull, then docker compose up -d --build
-   (offline: re-run pi_initial.sh from a new bundle, then docker compose up -d)
+3. Update: sudo bash ${APP_DIR}/scripts/pi_update.sh   (latest GitHub Release, or git pull)
+   (offline: sudo bash ${APP_DIR}/scripts/pi_update.sh <kmt-pi-bundle-vX.tar.gz>)
 4. Camera: any /dev/videoN, also plugged in later (set its path in the admin UI)
 5. docker without sudo: accounts in the docker group, after logging in again"
   log "Done. docker: $(systemctl is-active docker), container: $(compose ps --format '{{.Status}}' | head -1)"

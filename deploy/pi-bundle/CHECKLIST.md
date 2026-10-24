@@ -76,7 +76,13 @@
 - [ ] 管理画面「ゾーン」→ 追加 / 編集 →「卓と座席」で `cam1.jpg` を選び、座席の角をクリック → 座席を確定 → 保存
 - [ ] `docker compose up -d`（main.py は起動時に設定を読む）
 
-## G. 更新
+## G. 更新（main.py の変更）
 
-- [ ] 開発PCで新しいパッケージを作り（A）、Pi にコピーして `sudo bash pi_initial.sh`
-- [ ] 「上書きしますか」→ Yes。`conf/kmt-occupancy.env` とコンテナのデータ（未送信キュー）は残る
+1 コマンドで、アプリの差し替え・イメージの再ビルド・コンテナの再起動まで行います。`conf/kmt-occupancy.env` とコンテナのデータ（未送信キュー）は残ります。
+
+- [ ] ネット接続あり: `sudo bash /data/docker/apps/kmt-occupancy/scripts/pi_update.sh`（GitHub の最新 Release をダウンロードし、sha256 を確認して適用）
+- [ ] オフライン: `kmt-pi-bundle-vX.tar.gz` と `.sha256` を USB 等で Pi にコピーし、
+      `sudo bash /data/docker/apps/kmt-occupancy/scripts/pi_update.sh <USB のパス>/kmt-pi-bundle-vX.tar.gz`
+- [ ] 最後に `Updated to <版>` が出る。同じ版なら何もしない（`FORCE=1` で入れ直し）
+- `scripts/pi_update.sh` がない古いインストール（v0.3.0 より前）は、初回だけ従来どおり新しいパッケージから `sudo bash pi_initial.sh` →「上書きしますか」→ Yes
+- Docker 自体の更新は `pi_update.sh` では行わない（新しいパッケージから `pi_initial.sh`）

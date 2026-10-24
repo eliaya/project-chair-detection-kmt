@@ -7,6 +7,7 @@
 - Pi に `websockets==17.2` を追加（`requirements-pi.txt`。オフラインパッケージの wheel にも入る）
 - `wrangler.jsonc` に Durable Object（`LIVE` / `LiveRelay`）を追加。D1 のマイグレーションは不要
 - ログイン Cookie の `Secure` を、https でアクセスしたときだけ付けるように変更（http の LAN 版でログインできるように）
+- Pi の一括更新 `scripts/pi_update.sh` を追加：`sudo bash /data/docker/apps/kmt-occupancy/scripts/pi_update.sh` で GitHub の最新 Release（オフラインは USB の `kmt-pi-bundle-vX.tar.gz`）を sha256 で確認して適用し、イメージを再ビルドしてコンテナを再起動する。`conf/` と未送信キューは残る。git の checkout では `git pull` して再ビルド
 - 管理画面の LAN 版を追加（`deploy/lan-admin/`）：Cloudflare を使わず、同じ管理画面・API・ライブ映像を店内 LAN のサーバーで Docker（workerd）により動かす
 
 ## v0.2.0 (2026-10-24)

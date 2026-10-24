@@ -40,7 +40,7 @@ APT_PACKAGES = ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-pl
 BASE_IMAGE = ("library/python", "3.13-slim-trixie")
 NCNN = "ncnn==1.0.20260526"   # same pin as Dockerfile
 APP_FILES = ["Dockerfile", "compose.yaml", ".dockerignore", "main.py", "utils.py",
-             "draw_zones.py", "config.json", "requirements-pi.txt"]
+             "draw_zones.py", "config.json", "requirements-pi.txt", "scripts/pi_update.sh"]
 MODEL_PARAM = "models/yolo26n_ncnn_model/model.ncnn.param"
 
 
