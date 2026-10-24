@@ -203,7 +203,7 @@ grant_docker_access() {
   local name uid selected
   while IFS=: read -r name _ uid _; do
     if ((uid >= 1000 && uid < 65534)) && ! id -nG "$name" | grep -qw docker; then
-      items+=("$name" "" OFF)
+      items+=("$name" "" "$([[ "$name" == "${SUDO_USER:-}" ]] && echo ON || echo OFF)")
     fi
   done </etc/passwd
   ((${#items[@]} > 0)) || return 0
@@ -292,14 +292,16 @@ No: copy models/ from the dev PC later (scripts/export_model.sh)." || {
 
 # Same file as the systemd setup (install_pi.sh): API_TOKEN and CONFIG_URL
 write_env_file() {
+  # docker compose reads env_file itself, so the docker group (docker compose without sudo) needs read
   if [[ -f "$ENV_FILE" ]]; then
+    chgrp docker "$ENV_FILE" && chmod 0640 "$ENV_FILE"
     log "${ENV_FILE} exists, keeping it"
     return 0
   fi
   local url token
   url="$(ui_input "Worker config URL (leave empty to fill in ${ENV_FILE} later):" "https://<worker>/api/config")"
   token="$(ui_password "Device token from the admin UI (Devices -> issue token; may be empty for now):")"
-  install -m 0600 /dev/null "$ENV_FILE"
+  install -m 0640 -g docker /dev/null "$ENV_FILE"
   printf 'API_TOKEN=%s\nCONFIG_URL=%s\n' "$token" "$url" >"$ENV_FILE"
   log "Wrote ${ENV_FILE}"
 }
@@ -358,11 +360,12 @@ summary() {
 
 1. If not started yet: copy models/ from the dev PC and fill in ${ENV_FILE}
    (sudo nano ${ENV_FILE}), then
-   cd ${APP_DIR} && sudo docker compose up -d
-2. Logs: sudo docker compose logs -f   (in ${APP_DIR})
-3. Update: git pull, then sudo docker compose up -d --build
-   (offline: re-run pi_initial.sh from a new bundle, then sudo docker compose up -d)
-4. Camera: any /dev/videoN, also plugged in later (set its path in the admin UI)"
+   cd ${APP_DIR} && docker compose up -d
+2. Logs: docker compose logs -f   (in ${APP_DIR})
+3. Update: sudo git pull, then docker compose up -d --build
+   (offline: re-run pi_initial.sh from a new bundle, then docker compose up -d)
+4. Camera: any /dev/videoN, also plugged in later (set its path in the admin UI)
+5. docker without sudo: accounts in the docker group, after logging in again"
   log "Done. docker: $(systemctl is-active docker), container: $(compose ps --format '{{.Status}}' | head -1)"
 }
 

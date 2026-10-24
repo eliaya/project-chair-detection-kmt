@@ -49,28 +49,30 @@
   - インストール先（既定 `/data/docker/apps/kmt-occupancy`）
   - 設定 URL とデバイストークン（空欄で進め、後で `/etc/kmt-occupancy.env` に書いてもよい）
   - 旧方式（venv + systemd）の `kmt-occupancy.service` があれば停止
+  - docker グループに入れるアカウント（実行したユーザーは選択済み。`docker compose` を sudo なしで使える。root と同等の権限）
+- [ ] いったんログアウトして再ログイン（docker グループを反映。`id -nG` に `docker` が出れば OK）
 - [ ] 最後に `Started:` が出る。出ない場合は `WARN: Not started; missing:` に不足項目が出る → 対処して
-      `cd /data/docker/apps/kmt-occupancy && sudo docker compose up -d`
+      `cd /data/docker/apps/kmt-occupancy && docker compose up -d`
 
 ## E. 動作確認（ネット接続後）
 
 以下は `/data/docker/apps/kmt-occupancy` で実行します。
 
-- [ ] `sudo docker compose ps` → `Up`
-- [ ] `sudo docker compose logs -f` → `[heartbeat]` が 30 秒ごとに出る（`[config] ... 取得失敗` が出たら URL・トークン・ネットを確認）
+- [ ] `docker compose ps` → `Up`
+- [ ] `docker compose logs -f` → `[heartbeat]` が 30 秒ごとに出る（`[config] ... 取得失敗` が出たら URL・トークン・ネットを確認）
 - [ ] 管理画面「デバイス」で接続中になる
 - [ ] 同じ LAN の PC から `http://<Pi の IP>:8080` でローカル表示が開く
-- [ ] `sudo reboot` 後も自動で起動している（`sudo docker compose ps`）
-- `/etc/kmt-occupancy.env` を直したら `sudo docker compose up -d`（restart では読み直さない）
+- [ ] `sudo reboot` 後も自動で起動している（`docker compose ps`）
+- `/etc/kmt-occupancy.env` を直したら `docker compose up -d`（restart では読み直さない）
 
 ## F. 座席（ゾーン）の設定
 
-- [ ] `sudo docker compose stop`（カメラを空ける）
+- [ ] `docker compose stop`（カメラを空ける）
 - [ ] カメラ画像を保存（解像度は B で登録した値）:
-      `sudo docker compose run --rm -v "$PWD:/out" occupancy python /app/draw_zones.py --snapshot /out/cam1.jpg --width 1920 --height 1080`
+      `docker compose run --rm -v "$PWD:/out" occupancy python /app/draw_zones.py --snapshot /out/cam1.jpg --width 1920 --height 1080`
 - [ ] `cam1.jpg` を PC にコピー（例: `scp <user>@<pi>:/data/docker/apps/kmt-occupancy/cam1.jpg .`）
 - [ ] 管理画面「ゾーン」→ 追加 / 編集 →「卓と座席」で `cam1.jpg` を選び、座席の角をクリック → 座席を確定 → 保存
-- [ ] `sudo docker compose up -d`（main.py は起動時に設定を読む）
+- [ ] `docker compose up -d`（main.py は起動時に設定を読む）
 
 ## G. 更新
 
