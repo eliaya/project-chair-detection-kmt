@@ -270,6 +270,14 @@ export const zhCN: Dict = {
   'apiKeys.rotateDesc':
     '“{label}”当前的密钥将立即失效，请更新使用它的程序配置。',
   'cameras.desc': '连接到各设备的 USB 摄像头。',
+  'live.open': '实时画面',
+  'live.title': '实时画面：{camera}',
+  'live.legend':
+    '座位：红＝有人、绿＝空位、橙＝确认中。白框＝跟踪中的人物与跟踪 ID（不含店员、路人）。约每秒更新一次。',
+  'live.waiting': '正在等待 Pi 传来第一张画面…',
+  'live.no_pi':
+    'Pi 尚未连接提供实时画面。请确认 main.py（支持实时画面的版本）正在运行。',
+  'live.closed': '连接已断开。关闭后重新打开即可重新连接。',
   'floorplan.desc': '店内的墙面，以及桌椅的布局。',
   'floorplan.walls': '墙面',
   'floorplan.layout': '布局',

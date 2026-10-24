@@ -270,6 +270,14 @@ export const zhTW: Dict = {
   'apiKeys.rotateDesc':
     '「{label}」目前的金鑰將立即失效，請更新使用它的程式設定。',
   'cameras.desc': '連接到各裝置的 USB 攝影機。',
+  'live.open': '即時影像',
+  'live.title': '即時影像：{camera}',
+  'live.legend':
+    '座位：紅＝有人、綠＝空位、橘＝確認中。白框＝追蹤中的人物與追蹤 ID（不含店員、路人）。約每秒更新一次。',
+  'live.waiting': '正在等待 Pi 傳來第一張畫面…',
+  'live.no_pi':
+    'Pi 尚未連線提供即時影像。請確認 main.py（支援即時影像的版本）正在執行。',
+  'live.closed': '連線已中斷。關閉後重新開啟即可重新連線。',
   'floorplan.desc': '店內的牆面，以及桌椅的配置。',
   'floorplan.walls': '牆面',
   'floorplan.layout': '配置',

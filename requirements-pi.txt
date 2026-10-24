@@ -3,3 +3,4 @@
 # libGL on Pi OS Lite and clashes with the headless build below.
 numpy
 opencv-python-headless
+websockets==17.2

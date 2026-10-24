@@ -16,6 +16,11 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Live camera view relay (worker/live.ts), one object per device
+  "durable_objects": {
+    "bindings": [{ "name": "LIVE", "class_name": "LiveRelay" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["LiveRelay"] }],
   "ratelimits": [
     {
       "name": "LOGIN_LIMITER",

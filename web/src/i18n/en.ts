@@ -283,6 +283,14 @@ export const en = {
   'apiKeys.rotateDesc':
     'The current key of "{label}" stops working immediately. Update it in the program that uses it.',
   'cameras.desc': 'USB cameras connected to each device.',
+  'live.open': 'Live view',
+  'live.title': 'Live view: {camera}',
+  'live.legend':
+    'Seats: red occupied, green empty, orange confirming. White boxes: tracked persons with track ID (staff and passers-by excluded). About one frame per second.',
+  'live.waiting': 'Waiting for the first frame from the Pi…',
+  'live.no_pi':
+    'The Pi is not connected for live view. Check that main.py is running (version with live view).',
+  'live.closed': 'Disconnected. Close and reopen this view to retry.',
   'floorplan.desc': 'Room walls and the layout of tables and chairs.',
   'floorplan.walls': 'Walls',
   'floorplan.layout': 'Layout',

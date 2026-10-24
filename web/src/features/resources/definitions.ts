@@ -153,6 +153,7 @@ export const resources = {
       },
     ],
     refetchInterval: 5000,
+    liveView: true,
   },
   zones: {
     key: 'zones',

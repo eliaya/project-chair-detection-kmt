@@ -59,10 +59,10 @@ class HttpError extends Error {
 const json = (data: unknown, status = 200, headers?: HeadersInit) =>
   Response.json(data, { status, headers })
 
-// Not Secure in `vite dev` only: browsers drop Secure cookies on plain http other than
-// localhost, so login from a LAN address (dev.sh --host) would otherwise never stick.
-const sessionCookie = (value: string, maxAge: number) =>
-  `session=${value}; Path=/; HttpOnly;${import.meta.env.DEV ? '' : ' Secure;'} SameSite=Strict; Max-Age=${maxAge}`
+// Secure on https only: browsers drop Secure cookies on plain http other than localhost, so
+// login from a LAN address (dev.sh --host, the LAN admin in deploy/lan-admin) would never stick.
+const sessionCookie = (req: Request, value: string, maxAge: number) =>
+  `session=${value}; Path=/; HttpOnly;${new URL(req.url).protocol === 'https:' ? ' Secure;' : ''} SameSite=Strict; Max-Age=${maxAge}`
 
 async function body<T extends z.ZodType>(
   req: Request,
@@ -145,11 +145,11 @@ async function auth(req: Request, env: Env, action?: string) {
       throw new HttpError(401, 'error.badCredentials')
     const token = await signSession(row.id, env.SESSION_SECRET, SESSION_TTL_S)
     return json({ id: row.id, email: row.email, name: row.name }, 200, {
-      'Set-Cookie': sessionCookie(token, SESSION_TTL_S),
+      'Set-Cookie': sessionCookie(req, token, SESSION_TTL_S),
     })
   }
   if (action === 'logout' && req.method === 'POST')
-    return json({}, 200, { 'Set-Cookie': sessionCookie('', 0) })
+    return json({}, 200, { 'Set-Cookie': sessionCookie(req, '', 0) })
   if (action === 'me' && req.method === 'GET')
     return json(await requireAdmin(req, env))
   throw new HttpError(404, 'Not Found')
@@ -183,7 +183,7 @@ async function setup(req: Request, env: Env) {
     // Only the request that created the admin gets here, so a losing race cannot rename the site.
     await saveSiteName(env, d.site_name)
     const token = await signSession(row.id, env.SESSION_SECRET, SESSION_TTL_S)
-    return json(row, 201, { 'Set-Cookie': sessionCookie(token, SESSION_TTL_S) })
+    return json(row, 201, { 'Set-Cookie': sessionCookie(req, token, SESSION_TTL_S) })
   }
   throw new HttpError(404, 'Not Found')
 }
@@ -812,6 +812,15 @@ async function ingest(req: Request, env: Env, deviceId: string) {
   return json({ changed: changed.length })
 }
 
+// WebSocket to the device's LiveRelay (worker/live.ts); cam marks an admin viewer.
+function liveRelay(req: Request, env: Env, deviceId: string, cam?: string) {
+  if (req.headers.get('Upgrade') !== 'websocket')
+    throw new HttpError(426, 'Expected WebSocket')
+  const url = new URL('https://live/')
+  if (cam) url.searchParams.set('cam', cam)
+  return env.LIVE.get(env.LIVE.idFromName(deviceId)).fetch(new Request(url, req))
+}
+
 async function route(req: Request, env: Env) {
   const url = new URL(req.url)
   const [, , res, id, action] = url.pathname
@@ -822,6 +831,8 @@ async function route(req: Request, env: Env) {
     return deviceConfig(env, await requireToken(req, env, 'devices'), url.origin)
   if (res === 'occupancy' && !id && req.method === 'POST')
     return ingest(req, env, await requireToken(req, env, 'devices'))
+  if (res === 'live' && !id && req.method === 'GET')
+    return liveRelay(req, env, await requireToken(req, env, 'devices'))
   if (res === 'v1' && !action) return v1(req, env, url, id)
   if (res === 'auth') return auth(req, env, id)
   if (res === 'setup' && !id) return setup(req, env)
@@ -836,6 +847,13 @@ async function route(req: Request, env: Env) {
   if (res === 'api_keys') return apiKeys(req, env, id, action)
   if ((res === 'cameras' || res === 'zones') && !action)
     return crud(req, env, res, id)
+  if (res === 'cameras' && id && action === 'live' && req.method === 'GET') {
+    const cam = await env.DB.prepare('SELECT device_id FROM cameras WHERE id = ?')
+      .bind(id)
+      .first<{ device_id: string }>()
+    if (!cam) throw new HttpError(404, 'Not Found')
+    return liveRelay(req, env, cam.device_id, id)
+  }
   if (res === 'settings' && id === 'thresholds' && !action)
     return thresholds(req, env)
   if (res === 'settings' && id === 'site_name' && !action)
@@ -845,6 +863,8 @@ async function route(req: Request, env: Env) {
   if (res === 'occupancy' && !action) return occupancy(req, env, url, id)
   throw new HttpError(404, 'Not Found')
 }
+
+export { LiveRelay } from './live'
 
 export default {
   async fetch(req, env) {

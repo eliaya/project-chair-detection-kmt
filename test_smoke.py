@@ -534,35 +534,35 @@ class TestDashboardServer(unittest.TestCase):
             self.assertEqual(json.load(r), {"s": {"status": "occupied"}})
         srv.stop()
 
-    def test_live_page_and_stream(self):
-        import urllib.error
-        import urllib.request
-        from main import DashboardServer
-        srv = DashboardServer(port=0, cameras=["cam 1"], live_source=lambda cid: b"JPEG-" + cid.encode())
-        srv.start()
-        for _ in range(100):
-            if srv._server:
-                break
-            time.sleep(0.01)
-        base = f"http://127.0.0.1:{srv._server.server_address[1]}"
-        with urllib.request.urlopen(base + "/live", timeout=5) as r:
-            self.assertIn('src="/live/stream?cam=cam%201"', r.read().decode())
-        with urllib.request.urlopen(base + "/live/stream?cam=cam%201", timeout=5) as r:
-            self.assertTrue(r.headers["Content-Type"].startswith("multipart/x-mixed-replace"))
-            self.assertIn(b"JPEG-cam 1", r.read(80))
-        with self.assertRaises(urllib.error.HTTPError) as e:   # unknown camera
-            urllib.request.urlopen(base + "/live/stream?cam=x", timeout=5)
-        self.assertEqual(e.exception.code, 404)
-        with urllib.request.urlopen(base + "/api/state", timeout=5) as r:   # not blocked by the stream
-            self.assertEqual(json.load(r), {})
-        srv.stop()
+    def test_live_uplink_sends_watched_cameras(self):
+        try:
+            from websockets.sync.server import serve
+        except ImportError:
+            self.skipTest("websockets not installed")
+        import threading
+        from main import LiveUplink
+        got = {}
 
-    def test_live_only_for_lan(self):
-        from main import lan_client
-        for ip in ("127.0.0.1", "192.168.1.20", "10.128.2.9", "172.17.0.1", "fd00::1"):
-            self.assertTrue(lan_client(ip), ip)
-        for ip in ("8.8.8.8", "1.1.1.1", "2001:4860::1", "bad"):
-            self.assertFalse(lan_client(ip), ip)
+        def worker(ws):   # stands in for web/worker/live.ts
+            got["auth"] = ws.request.headers["Authorization"]
+            got["path"] = ws.request.path
+            ws.send(json.dumps({"watch": ["cam1"]}))
+            got["frame"] = ws.recv(timeout=5)
+
+        with serve(worker, "127.0.0.1", 0) as server:
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            port = server.socket.getsockname()[1]
+            up = LiveUplink(f"http://127.0.0.1:{port}/api/config", "tok",
+                            lambda cid: b"JPEG" if cid == "cam1" else None)
+            self.assertEqual(up.url, f"ws://127.0.0.1:{port}/api/live")
+            up.start()
+            for _ in range(100):
+                if "frame" in got:
+                    break
+                time.sleep(0.05)
+            server.shutdown()
+        self.assertEqual((got["auth"], got["path"], got["frame"]), ("Bearer tok", "/api/live", b"cam1\nJPEG"))
+        self.assertEqual(LiveUplink("https://w.example/api/config", "t", None).url, "wss://w.example/api/live")
 
     def test_annotate(self):
         try:

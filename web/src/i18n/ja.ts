@@ -279,6 +279,14 @@ export const ja: Dict = {
   'apiKeys.rotateDesc':
     '「{label}」の現在のキーはすぐに使えなくなります。利用しているプログラムの設定を更新してください。',
   'cameras.desc': '各デバイスに接続された USB カメラです。',
+  'live.open': 'ライブ映像',
+  'live.title': 'ライブ映像: {camera}',
+  'live.legend':
+    '座席: 赤＝着席、緑＝空席、橙＝確認中。白枠＝追跡中の人物と追跡 ID（スタッフ・通行人は除外）。約 1 秒ごとに更新。',
+  'live.waiting': 'Pi からの最初の画像を待っています…',
+  'live.no_pi':
+    'Pi がライブ映像用に接続していません。main.py（ライブ映像対応版）が動いているか確認してください。',
+  'live.closed': '切断されました。閉じて開き直すと再接続します。',
   'floorplan.desc': '店内の壁と、テーブル・椅子の配置です。',
   'floorplan.walls': '壁',
   'floorplan.layout': '配置',
