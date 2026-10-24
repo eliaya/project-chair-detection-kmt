@@ -253,7 +253,7 @@ export const zhCN: Dict = {
   'connect.cameraError': '已连接，但摄像头有问题：{cameras}',
   'dashboard.cameraProblem': '摄像头 {camera}：{status}',
   'resource.tokenDesc':
-    '此令牌不会再次显示。请在 Pi 的 /etc/kmt-occupancy.env 写入以下两行，然后运行 sudo systemctl restart kmt-occupancy。',
+    '此令牌不会再次显示。请在 Pi 的 /data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env 写入以下两行，然后在该目录运行 docker compose up -d。',
 
   'admins.desc': '可以登录此管理后台的账号。',
   'admins.passwordHint':

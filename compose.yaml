@@ -6,10 +6,10 @@ services:
     build: .
     image: kmt-occupancy
     restart: unless-stopped
-    # API_TOKEN and CONFIG_URL, root:docker 0640
-    env_file: /etc/kmt-occupancy.env
+    # API_TOKEN and CONFIG_URL, written by pi_initial.sh; root:docker 0640, not in git
+    env_file: ./conf/kmt-occupancy.env
     # $$: expanded by the container's shell from env_file, not by compose
-    command: ["sh", "-c", '[ -n "$$CONFIG_URL" ] || { echo "CONFIG_URL is empty: set it in /etc/kmt-occupancy.env, then docker compose up -d" >&2; exit 1; }; exec python /app/main.py --config "$$CONFIG_URL"']
+    command: ["sh", "-c", '[ -n "$$CONFIG_URL" ] || { echo "CONFIG_URL is empty: set it in conf/kmt-occupancy.env, then docker compose up -d" >&2; exit 1; }; exec python /app/main.py --config "$$CONFIG_URL"']
     # Every camera (/dev/videoN, any N), present at start or plugged in later: the host's /dev
     # with access to V4L2 devices only (char major 81). With a "devices:" entry instead, a
     # missing camera stops the container from starting; main.py itself retries a camera.

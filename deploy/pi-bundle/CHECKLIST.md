@@ -47,7 +47,7 @@
 - [ ] `cd ~/kmt-pi-bundle && sha256sum -c --quiet SHA256SUMS` → 何も表示されなければ OK
 - [ ] `sudo bash pi_initial.sh` を実行し、画面の質問に答える
   - インストール先（既定 `/data/docker/apps/kmt-occupancy`）
-  - 設定 URL とデバイストークン（空欄で進め、後で `/etc/kmt-occupancy.env` に書いてもよい）
+  - 設定 URL とデバイストークン（空欄で進め、後で `/data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env` に書いてもよい）
   - 旧方式（venv + systemd）の `kmt-occupancy.service` があれば停止
   - docker グループに入れるアカウント（実行したユーザーは選択済み。`docker compose` を sudo なしで使える。root と同等の権限）
 - [ ] いったんログアウトして再ログイン（docker グループを反映。`id -nG` に `docker` が出れば OK）
@@ -63,7 +63,7 @@
 - [ ] 管理画面「デバイス」で接続中になる
 - [ ] 同じ LAN の PC から `http://<Pi の IP>:8080` でローカル表示が開く
 - [ ] `sudo reboot` 後も自動で起動している（`docker compose ps`）
-- `/etc/kmt-occupancy.env` を直したら `docker compose up -d`（restart では読み直さない）
+- `conf/kmt-occupancy.env` を直したら（`sudo nano conf/kmt-occupancy.env`） `docker compose up -d`（restart では読み直さない）
 
 ## F. 座席（ゾーン）の設定
 
@@ -77,4 +77,4 @@
 ## G. 更新
 
 - [ ] 開発PCで新しいパッケージを作り（A）、Pi にコピーして `sudo bash pi_initial.sh`
-- [ ] 「上書きしますか」→ Yes。`/etc/kmt-occupancy.env` とコンテナのデータ（未送信キュー）は残る
+- [ ] 「上書きしますか」→ Yes。`conf/kmt-occupancy.env` とコンテナのデータ（未送信キュー）は残る

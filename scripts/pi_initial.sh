@@ -41,7 +41,10 @@ EXPORT_IMAGE=ultralytics/ultralytics:latest-arm64
 BASE_IMAGE=python:3.13-slim-trixie   # FROM in the Dockerfile; images/ in the bundle
 APT_LIST=""
 APT_OPTS=()
-ENV_FILE=/etc/kmt-occupancy.env
+# API_TOKEN and CONFIG_URL, in APP_DIR next to compose.yaml: nothing of the app under /etc
+ENV_REL=conf/kmt-occupancy.env
+ENV_FILE=""   # "$APP_DIR/$ENV_REL", set once fetch_app has settled APP_DIR
+OLD_ENV_FILE=/etc/kmt-occupancy.env   # older setups; moved into conf/
 OLD_UNIT=kmt-occupancy.service
 TITLE="KMT Pi Setup"
 export DEBIAN_FRONTEND=noninteractive
@@ -135,7 +138,7 @@ Continue anyway?" || die "Cancelled"
   2. Add login accounts to the docker group (will ask)
   3. ${app}
   4. Export the YOLO26n NCNN model if models/ is missing (will ask)
-  5. Write ${ENV_FILE} if missing (asks for the Worker URL and device token)
+  5. Write ${ENV_REL} if missing (asks for the Worker URL and device token)
   6. Stop the old venv + systemd service if present (will ask)
   7. Build main.py as the kmt-occupancy image and start it
 
@@ -223,7 +226,7 @@ copy_bundle_app() {
   APP_DIR="$(ui_input "Directory to install the app into:" "$APP_DIR")"
   if [[ -f "$APP_DIR/compose.yaml" ]]; then
     ui_yesno "${APP_DIR} already has the app. Overwrite its files with this bundle's?
-(${ENV_FILE} and the container's data volume are kept.)" || {
+(${ENV_REL} and the container's data volume are kept.)" || {
       log "Keeping the app in ${APP_DIR}"
       return 0
     }
@@ -299,9 +302,17 @@ No: copy models/ from the dev PC later (scripts/export_model.sh)." || {
   log "Exported ${MODEL_PARAM}"
 }
 
-# Same file as the old systemd setup: API_TOKEN and CONFIG_URL
 write_env_file() {
   # docker compose reads env_file itself, so the docker group (docker compose without sudo) needs read
+  install -d -m 0750 -g docker "$APP_DIR/conf"
+  if [[ -f "$OLD_ENV_FILE" ]]; then
+    if [[ -f "$ENV_FILE" ]]; then
+      warn "${OLD_ENV_FILE} is no longer read (${ENV_FILE} is); delete it"
+    else
+      mv "$OLD_ENV_FILE" "$ENV_FILE"
+      log "Moved ${OLD_ENV_FILE} to ${ENV_FILE}"
+    fi
+  fi
   if [[ -f "$ENV_FILE" ]]; then
     chgrp docker "$ENV_FILE" && chmod 0640 "$ENV_FILE"
     log "${ENV_FILE} exists, keeping it"
@@ -384,6 +395,7 @@ main() {
   install_docker
   grant_docker_access
   fetch_app
+  ENV_FILE="$APP_DIR/$ENV_REL"
   export_model
   write_env_file
   stop_systemd_service

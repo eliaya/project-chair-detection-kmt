@@ -253,7 +253,7 @@ export const zhTW: Dict = {
   'connect.cameraError': '已連線，但攝影機有問題：{cameras}',
   'dashboard.cameraProblem': '攝影機 {camera}：{status}',
   'resource.tokenDesc':
-    '此權杖不會再次顯示。請在 Pi 的 /etc/kmt-occupancy.env 寫入以下兩行，再執行 sudo systemctl restart kmt-occupancy。',
+    '此權杖不會再次顯示。請在 Pi 的 /data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env 寫入以下兩行，再於該目錄執行 docker compose up -d。',
 
   'admins.desc': '可以登入此管理後台的帳號。',
   'admins.passwordHint':

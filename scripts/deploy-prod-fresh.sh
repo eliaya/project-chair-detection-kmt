@@ -7,7 +7,7 @@
 #
 # What comes back is only what the migrations write: the schema and default settings. No admin —
 # /admin opens the setup wizard again, which needs SETUP_TOKEN. Every Pi has to be registered
-# again under "デバイス" and given its new API_TOKEN in /etc/kmt-occupancy.env.
+# again under "デバイス" and given its new API_TOKEN in conf/kmt-occupancy.env.
 #
 # Usage:
 #   CLOUDFLARE_API_TOKEN=xxx ./scripts/deploy-prod-fresh.sh --yes
@@ -109,6 +109,6 @@ cat <<EOF
 [fresh] done. The database now holds only the schema and default settings:
   - no admin: open /admin and create one with the setup code (SETUP_TOKEN)
   - no devices, cameras, zones, floor plan or API keys: set them up again in /admin
-  - every Pi needs a newly issued API_TOKEN in /etc/kmt-occupancy.env, then
-    sudo systemctl restart kmt-occupancy
+  - every Pi needs a newly issued API_TOKEN in /data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env,
+    then docker compose up -d in that directory
 EOF

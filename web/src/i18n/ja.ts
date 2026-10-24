@@ -261,7 +261,7 @@ export const ja: Dict = {
   'connect.cameraError': '接続しましたが、カメラに問題があります: {cameras}',
   'dashboard.cameraProblem': 'カメラ {camera}: {status}',
   'resource.tokenDesc':
-    'このトークンは二度と表示されません。Pi の /etc/kmt-occupancy.env に次の2行を書き、sudo systemctl restart kmt-occupancy を実行してください。',
+    'このトークンは二度と表示されません。Pi の /data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env に次の2行を書き、そのディレクトリで docker compose up -d を実行してください。',
 
   'admins.desc': 'この管理画面にログインできるアカウントです。',
   'admins.passwordHint':

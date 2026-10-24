@@ -265,7 +265,7 @@ export const en = {
   'connect.cameraError': 'Connected, but a camera has a problem: {cameras}',
   'dashboard.cameraProblem': 'Camera {camera}: {status}',
   'resource.tokenDesc':
-    'This token will not be shown again. On the Pi, put these two lines in /etc/kmt-occupancy.env and run sudo systemctl restart kmt-occupancy.',
+    'This token will not be shown again. On the Pi, put these two lines in /data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env and run docker compose up -d in that directory.',
 
   'admins.desc': 'Accounts that can sign in to this admin console.',
   'admins.passwordHint':
