@@ -7,6 +7,8 @@ const config: KnipConfig = {
     // Third-party source (vendor/blueprint3d/VENDOR.md); only the parts we import are used.
     'vendor/**',
   ],
+  // Workers runtime module (worker/live.ts), not an npm package
+  ignoreDependencies: ['cloudflare'],
 }
 
 export default config

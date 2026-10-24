@@ -1,0 +1,19 @@
+# Admin UI without Cloudflare, on a server in the store LAN (README.md):
+#   docker compose up -d --build
+#   docker compose logs admin | grep "setup code"
+services:
+  admin:
+    build:
+      context: ../../web
+      dockerfile: ../deploy/lan-admin/Dockerfile # relative to the context
+      additional_contexts:
+        lan: .
+    image: kmt-admin-lan
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    volumes:
+      - data:/data # D1, Durable Object, secrets
+
+volumes:
+  data:

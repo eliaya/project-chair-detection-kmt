@@ -7,6 +7,7 @@
 - Pi に `websockets==17.2` を追加（`requirements-pi.txt`。オフラインパッケージの wheel にも入る）
 - `wrangler.jsonc` に Durable Object（`LIVE` / `LiveRelay`）を追加。D1 のマイグレーションは不要
 - ログイン Cookie の `Secure` を、https でアクセスしたときだけ付けるように変更（http の LAN 版でログインできるように）
+- 管理画面の LAN 版を追加（`deploy/lan-admin/`）：Cloudflare を使わず、同じ管理画面・API・ライブ映像を店内 LAN のサーバーで Docker（workerd）により動かす
 
 ## v0.2.0 (2026-10-24)
 

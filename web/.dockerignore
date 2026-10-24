@@ -1,0 +1,5 @@
+# deploy/lan-admin/Dockerfile: built inside the image; local secrets stay out
+node_modules
+dist
+.wrangler
+.dev.vars*

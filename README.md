@@ -61,4 +61,5 @@ python3 main.py --mock --duration 60    # http://localhost:8080 に座席の状�
 ## 関連ドキュメント
 
 - [web/README.md](web/README.md): 管理画面・API・Pi 連携・外部連携 API の詳細
+- [deploy/lan-admin/README.md](deploy/lan-admin/README.md): Cloudflare を使わず、店内 LAN のサーバーで管理画面を動かす
 - [CHANGELOG.md](CHANGELOG.md): 変更履歴
