@@ -1,5 +1,13 @@
 # 変更履歴
 
+## v1.7.0 (2026-10-24)
+
+- Pi の設定ファイルを `/etc/kmt-occupancy.env` からアプリのディレクトリ内の `conf/kmt-occupancy.env`（既定 `/data/docker/apps/kmt-occupancy/conf/`）に移動。ホストの `/etc` には何も置かない。`conf/` は git の対象外
+- `scripts/pi_initial.sh` を再実行すると、既存の `/etc/kmt-occupancy.env` を `conf/` に移動する（両方ある場合は `conf/` を使い、`/etc` 側の削除を促す）
+- `scripts/pi_initial.sh` の再実行時、既存のチェックアウトを `git pull --ff-only` で更新（古い `compose.yaml` の `devices: /dev/video0` が残り、カメラなしで起動できなかった問題の修正）
+- `scripts/install_pi.sh`（venv + systemd による導入）と `deploy/kmt-occupancy.service` を削除。Pi の導入は Docker（`pi_initial.sh`）のみ
+- 管理画面のトークン表示の案内を新しい設定ファイルの場所と `docker compose up -d` に変更
+
 ## v1.6.1 (2026-10-24)
 
 - Pi：`docker compose` を sudo なしで実行できるように変更。`scripts/pi_initial.sh` は実行したアカウントを docker グループの候補として選択済みにし、`/etc/kmt-occupancy.env` を `root:docker 0640` にする（`docker compose` が env_file を自分で読むため）
