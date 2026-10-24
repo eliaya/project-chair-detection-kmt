@@ -1,5 +1,10 @@
 # 変更履歴
 
+## v1.6.1 (2026-10-24)
+
+- Pi：`docker compose` を sudo なしで実行できるように変更。`scripts/pi_initial.sh` は実行したアカウントを docker グループの候補として選択済みにし、`/etc/kmt-occupancy.env` を `root:docker 0640` にする（`docker compose` が env_file を自分で読むため）
+- 既存の Pi では `sudo usermod -aG docker $USER`、`sudo chgrp docker /etc/kmt-occupancy.env && sudo chmod 640 /etc/kmt-occupancy.env` の後、再ログイン
+
 ## v1.6.0 (2026-10-24)
 
 - 管理画面「ゾーン」：カメラ画像の上で座席の角をクリックして多角形を描き、そのまま保存（`draw_zones.py` の JSON を貼り付ける手順は不要）
