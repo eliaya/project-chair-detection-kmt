@@ -16,7 +16,7 @@
 #   https://docs.docker.com/engine/install/raspberry-pi-os/
 #
 # Steps involving privileges or deletion (removing conflicting packages, docker group, stopping the
-# systemd service of scripts/install_pi.sh) all prompt via whiptail dialogs. Safe to re-run.
+# old venv + systemd service) all prompt via whiptail dialogs. Safe to re-run.
 #
 # Environment variables:
 #   APP_DIR=/data/docker/apps/kmt-occupancy   # where the repo is cloned (asked when not inside a checkout)
@@ -136,7 +136,7 @@ Continue anyway?" || die "Cancelled"
   3. ${app}
   4. Export the YOLO26n NCNN model if models/ is missing (will ask)
   5. Write ${ENV_FILE} if missing (asks for the Worker URL and device token)
-  6. Stop the systemd service of install_pi.sh if present (will ask)
+  6. Stop the old venv + systemd service if present (will ask)
   7. Build main.py as the kmt-occupancy image and start it
 
 Continue?" || die "Cancelled"
@@ -290,7 +290,7 @@ No: copy models/ from the dev PC later (scripts/export_model.sh)." || {
   log "Exported ${MODEL_PARAM}"
 }
 
-# Same file as the systemd setup (install_pi.sh): API_TOKEN and CONFIG_URL
+# Same file as the old systemd setup: API_TOKEN and CONFIG_URL
 write_env_file() {
   # docker compose reads env_file itself, so the docker group (docker compose without sudo) needs read
   if [[ -f "$ENV_FILE" ]]; then
@@ -309,7 +309,7 @@ write_env_file() {
 # The venv + systemd setup would hold the camera too
 stop_systemd_service() {
   systemctl is-enabled --quiet "$OLD_UNIT" 2>/dev/null || systemctl is-active --quiet "$OLD_UNIT" || return 0
-  if ui_yesno "${OLD_UNIT} (scripts/install_pi.sh) is installed. It runs main.py outside Docker
+  if ui_yesno "${OLD_UNIT} (old venv + systemd setup) is installed. It runs main.py outside Docker
 and would hold the camera at the same time as the container.
 
 Stop and disable it? (The unit file is kept; re-enable with

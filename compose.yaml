@@ -6,7 +6,7 @@ services:
     build: .
     image: kmt-occupancy
     restart: unless-stopped
-    # API_TOKEN and CONFIG_URL, shared with the systemd setup (scripts/install_pi.sh); root:docker 0640
+    # API_TOKEN and CONFIG_URL, root:docker 0640
     env_file: /etc/kmt-occupancy.env
     # $$: expanded by the container's shell from env_file, not by compose
     command: ["sh", "-c", '[ -n "$$CONFIG_URL" ] || { echo "CONFIG_URL is empty: set it in /etc/kmt-occupancy.env, then docker compose up -d" >&2; exit 1; }; exec python /app/main.py --config "$$CONFIG_URL"']
