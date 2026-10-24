@@ -47,12 +47,14 @@
 - [ ] `cd ~/kmt-pi-bundle && sha256sum -c --quiet SHA256SUMS` → 何も表示されなければ OK
 - [ ] `sudo bash pi_initial.sh` を実行し、画面の質問に答える
   - インストール先（既定 `/data/docker/apps/kmt-occupancy`）
-  - 設定 URL とデバイストークン（空欄で進め、後で `/data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env` に書いてもよい）
   - 旧方式（venv + systemd）の `kmt-occupancy.service` があれば停止
   - docker グループに入れるアカウント（実行したユーザーは選択済み。`docker compose` を sudo なしで使える。root と同等の権限）
 - [ ] いったんログアウトして再ログイン（docker グループを反映。`id -nG` に `docker` が出れば OK）
 - [ ] 最後に `Started:` が出る。出ない場合は `WARN: Not started; missing:` に不足項目が出る → 対処して
       `cd /data/docker/apps/kmt-occupancy && docker compose up -d`
+- [ ] 同じ LAN の PC かスマートフォンで `http://<Pi の IP>:8080/setup` を開き、B で控えた設定 URL とデバイストークンを入力して「保存して再起動」
+  - 保存の前に、その URL とトークンで設定を取得できるか確認する（ネット接続が必要）。保存先は `/data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env`
+  - 変更するときは同じページで、現在のトークンも入力する。忘れた場合は `sudo rm conf/kmt-occupancy.env && docker compose restart`
 
 ## E. 動作確認（ネット接続後）
 
@@ -63,7 +65,6 @@
 - [ ] 管理画面「デバイス」で接続中になる
 - [ ] 同じ LAN の PC から `http://<Pi の IP>:8080` でローカル表示が開く
 - [ ] `sudo reboot` 後も自動で起動している（`docker compose ps`）
-- `conf/kmt-occupancy.env` を直したら（`sudo nano conf/kmt-occupancy.env`） `docker compose up -d`（restart では読み直さない）
 
 ## F. 座席（ゾーン）の設定
 

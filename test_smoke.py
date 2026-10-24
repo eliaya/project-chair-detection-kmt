@@ -384,6 +384,84 @@ class TestConfigURL(unittest.TestCase):
         self.assertIn("zones", cfg)
 
 
+class TestSettings(unittest.TestCase):
+    """/setup: API_TOKEN and CONFIG_URL are saved only after they fetch the config."""
+
+    def setUp(self):
+        import http.server, tempfile, threading
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                ok = self.headers.get("Authorization") == "Bearer good"
+                self.send_response(200 if ok else 401)
+                self.end_headers()
+                if ok:
+                    self.wfile.write(b'{"zones": []}')
+
+            def log_message(self, *a):
+                pass
+
+        self.srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.url = f"http://127.0.0.1:{self.srv.server_port}/api/config"
+        self.dir = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.dir.name, "kmt-occupancy.env")
+
+    def tearDown(self):
+        self.srv.shutdown()
+        self.srv.server_close()
+        self.dir.cleanup()
+
+    def settings(self):
+        from main import Settings
+        return Settings(self.path)
+
+    def test_missing_file_is_incomplete(self):
+        self.assertFalse(self.settings().complete)
+
+    def test_save_checks_the_config_url_first(self):
+        st = self.settings()
+        self.assertIn("401", st.save({"config_url": self.url, "api_token": "bad"}))
+        self.assertFalse(os.path.exists(self.path))
+        self.assertIn("http", st.save({"config_url": "ftp://x", "api_token": "good"}))
+        self.assertIn("トークン", st.save({"config_url": self.url, "api_token": "a\nCONFIG_URL=x"}))
+        self.assertIsNone(st.save({"config_url": self.url, "api_token": "good"}))
+        self.assertEqual(oct(os.stat(self.path).st_mode & 0o777), "0o600")
+        again = self.settings()
+        self.assertTrue(again.complete)
+        self.assertEqual(again.values, {"API_TOKEN": "good", "CONFIG_URL": self.url})
+
+    def test_replacing_needs_the_current_token(self):
+        st = self.settings()
+        st.save({"config_url": self.url, "api_token": "good"})
+        form = {"config_url": self.url, "api_token": "good"}
+        self.assertEqual(st.save(form), "現在のトークンが違います")
+        self.assertEqual(st.save({**form, "current_token": "nope"}), "現在のトークンが違います")
+        self.assertIsNone(st.save({**form, "current_token": "good"}))
+
+    def test_setup_page_post_saves_and_restarts(self):
+        import urllib.parse, urllib.request
+        from main import DashboardServer
+        saved = []
+        dash = DashboardServer(port=0, settings=self.settings(), on_saved=lambda: saved.append(1))
+        dash.start()
+        for _ in range(100):
+            if dash._server:
+                break
+            time.sleep(0.01)
+        base = f"http://127.0.0.1:{dash._server.server_address[1]}"
+        try:
+            with urllib.request.urlopen(base + "/setup", timeout=5) as r:
+                self.assertIn("未設定", r.read().decode())
+            body = urllib.parse.urlencode({"config_url": self.url, "api_token": "good"}).encode()
+            with urllib.request.urlopen(base + "/setup", data=body, timeout=5) as r:
+                self.assertIn("保存しました", r.read().decode())
+            self.assertEqual(saved, [1])
+            self.assertTrue(self.settings().complete)
+        finally:
+            dash.stop()
+
+
 class TestRun(unittest.TestCase):
     """main.run(): tracks persist across frames; cameras only feed their own zones."""
 

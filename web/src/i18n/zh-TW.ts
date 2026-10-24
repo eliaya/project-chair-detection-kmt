@@ -245,15 +245,17 @@ export const zhTW: Dict = {
   'cameraStatus.not_reported': '未回報（請重新啟動 main.py）',
   'cameraStatus.offline': 'Pi 離線',
   'devices.healthDetail': 'v{version} · 推論 {ms}ms · 未送出 {queue} 筆',
+  'connect.configUrl': '設定 URL',
+  'connect.token': '裝置權杖',
   'connect.waiting': '等待 Pi 連線…',
   'connect.hint':
-    '若無法連線，請在 Pi 上查看記錄：journalctl -u kmt-occupancy -f',
+    '若無法連線，請在 Pi 上查看記錄：docker compose logs -f（於 /data/docker/apps/kmt-occupancy 執行）',
   'connect.starting': 'Pi 已取得設定，正在啟動。',
   'connect.online': '已連線，正在接收 Pi 的資料。',
   'connect.cameraError': '已連線，但攝影機有問題：{cameras}',
   'dashboard.cameraProblem': '攝影機 {camera}：{status}',
   'resource.tokenDesc':
-    '此權杖不會再次顯示。請在 Pi 的 /data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env 寫入以下兩行，再於該目錄執行 docker compose up -d。',
+    '此權杖不會再次顯示。請開啟 Pi 的 http://<Pi 的 IP 位址>:8080/setup，填入以下設定 URL 與權杖。',
 
   'admins.desc': '可以登入此管理後台的帳號。',
   'admins.passwordHint':

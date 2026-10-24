@@ -245,15 +245,17 @@ export const zhCN: Dict = {
   'cameraStatus.not_reported': '未上报（请重启 main.py）',
   'cameraStatus.offline': 'Pi 离线',
   'devices.healthDetail': 'v{version} · 推理 {ms}ms · 未发送 {queue} 条',
+  'connect.configUrl': '配置 URL',
+  'connect.token': '设备令牌',
   'connect.waiting': '等待 Pi 连接…',
   'connect.hint':
-    '若无法连接，请在 Pi 上查看日志：journalctl -u kmt-occupancy -f',
+    '若无法连接，请在 Pi 上查看日志：docker compose logs -f（在 /data/docker/apps/kmt-occupancy 运行）',
   'connect.starting': 'Pi 已获取配置，正在启动。',
   'connect.online': '已连接，正在接收 Pi 的数据。',
   'connect.cameraError': '已连接，但摄像头有问题：{cameras}',
   'dashboard.cameraProblem': '摄像头 {camera}：{status}',
   'resource.tokenDesc':
-    '此令牌不会再次显示。请在 Pi 的 /data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env 写入以下两行，然后在该目录运行 docker compose up -d。',
+    '此令牌不会再次显示。请打开 Pi 的 http://<Pi 的 IP 地址>:8080/setup，填入以下配置 URL 和令牌。',
 
   'admins.desc': '可以登录此管理后台的账号。',
   'admins.passwordHint':

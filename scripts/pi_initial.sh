@@ -41,7 +41,8 @@ EXPORT_IMAGE=ultralytics/ultralytics:latest-arm64
 BASE_IMAGE=python:3.13-slim-trixie   # FROM in the Dockerfile; images/ in the bundle
 APT_LIST=""
 APT_OPTS=()
-# API_TOKEN and CONFIG_URL, in APP_DIR next to compose.yaml: nothing of the app under /etc
+# API_TOKEN and CONFIG_URL, in APP_DIR next to compose.yaml (nothing of the app under /etc);
+# main.py writes it from its /setup page
 ENV_REL=conf/kmt-occupancy.env
 ENV_FILE=""   # "$APP_DIR/$ENV_REL", set once fetch_app has settled APP_DIR
 OLD_ENV_FILE=/etc/kmt-occupancy.env   # older setups; moved into conf/
@@ -75,10 +76,6 @@ ui_msg() {
 # whiptail writes input to stderr; swap fds so $() can capture it
 ui_input() {
   whiptail --title "$TITLE" --inputbox "$1" 12 78 "${2:-}" 3>&1 1>&2 2>&3 || die "Cancelled"
-}
-
-ui_password() {
-  whiptail --title "$TITLE" --passwordbox "$1" 12 78 3>&1 1>&2 2>&3 || die "Cancelled"
 }
 
 # Offline, apt sees only the bundle's debs/ (no network); online, the normal sources
@@ -138,7 +135,7 @@ Continue anyway?" || die "Cancelled"
   2. Add login accounts to the docker group (will ask)
   3. ${app}
   4. Export the YOLO26n NCNN model if models/ is missing (will ask)
-  5. Write ${ENV_REL} if missing (asks for the Worker URL and device token)
+  5. Create conf/ (the Worker URL and device token are entered later at http://<pi>:8080/setup)
   6. Stop the old venv + systemd service if present (will ask)
   7. Build main.py as the kmt-occupancy image and start it
 
@@ -302,9 +299,8 @@ No: copy models/ from the dev PC later (scripts/export_model.sh)." || {
   log "Exported ${MODEL_PARAM}"
 }
 
-write_env_file() {
-  # docker compose reads env_file itself, so the docker group (docker compose without sudo) needs read
-  install -d -m 0750 -g docker "$APP_DIR/conf"
+prepare_conf() {
+  install -d -m 0700 "$APP_DIR/conf"
   if [[ -f "$OLD_ENV_FILE" ]]; then
     if [[ -f "$ENV_FILE" ]]; then
       warn "${OLD_ENV_FILE} is no longer read (${ENV_FILE} is); delete it"
@@ -313,17 +309,8 @@ write_env_file() {
       log "Moved ${OLD_ENV_FILE} to ${ENV_FILE}"
     fi
   fi
-  if [[ -f "$ENV_FILE" ]]; then
-    chgrp docker "$ENV_FILE" && chmod 0640 "$ENV_FILE"
-    log "${ENV_FILE} exists, keeping it"
-    return 0
-  fi
-  local url token
-  url="$(ui_input "Worker config URL (leave empty to fill in ${ENV_FILE} later):" "https://<worker>/api/config")"
-  token="$(ui_password "Device token from the admin UI (Devices -> issue token; may be empty for now):")"
-  install -m 0640 -g docker /dev/null "$ENV_FILE"
-  printf 'API_TOKEN=%s\nCONFIG_URL=%s\n' "$token" "$url" >"$ENV_FILE"
-  log "Wrote ${ENV_FILE}"
+  [[ -f "$ENV_FILE" ]] && chmod 0600 "$ENV_FILE"
+  return 0
 }
 
 # The venv + systemd setup would hold the camera too
@@ -361,10 +348,6 @@ start_container() {
   local -a missing=()
   [[ -f "$APP_DIR/$MODEL_PARAM" ]] \
     || missing+=("models/ (re-run this script, or scp -r models <pi>:${APP_DIR}/)")
-  grep -q '^API_TOKEN=.' "$ENV_FILE" || missing+=("API_TOKEN in ${ENV_FILE}")
-  if ! grep -Eq '^CONFIG_URL=https?://' "$ENV_FILE" || grep -q '<worker>' "$ENV_FILE"; then
-    missing+=("CONFIG_URL in ${ENV_FILE}")
-  fi
   if ((${#missing[@]} > 0)); then
     warn "Not started; missing: ${missing[*]}"
     return 0
@@ -378,9 +361,9 @@ start_container() {
 summary() {
   ui_msg "Done. Next steps:
 
-1. If not started yet: copy models/ from the dev PC and fill in ${ENV_FILE}
-   (sudo nano ${ENV_FILE}), then
-   cd ${APP_DIR} && docker compose up -d
+1. Open http://$(hostname -I | awk '{print $1}'):8080/setup and enter the Worker config URL and
+   the device token (admin UI: Devices). main.py restarts with them.
+   If not started yet: copy models/ from the dev PC, then cd ${APP_DIR} && docker compose up -d
 2. Logs: docker compose logs -f   (in ${APP_DIR})
 3. Update: sudo git pull, then docker compose up -d --build
    (offline: re-run pi_initial.sh from a new bundle, then docker compose up -d)
@@ -397,7 +380,7 @@ main() {
   fetch_app
   ENV_FILE="$APP_DIR/$ENV_REL"
   export_model
-  write_env_file
+  prepare_conf
   stop_systemd_service
   build_image
   start_container

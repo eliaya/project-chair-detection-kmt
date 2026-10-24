@@ -3,13 +3,18 @@ YOLO26n (NCNN) + ByteTrack で人物検出・追跡 → 座席区域判定 → �
 """
 
 import argparse
+import hmac
+import html
 import json
 import math
+import re
+import signal
 import time
 import threading
 import os
 import sqlite3
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -440,37 +445,150 @@ class CloudSync:
 
 
 # ---------------------------------------------------------------------------
+# Settings (API_TOKEN, CONFIG_URL) entered on the dashboard's /setup page
+# ---------------------------------------------------------------------------
+
+class Settings:
+    """API_TOKEN and CONFIG_URL in an env file (on the Pi: conf/kmt-occupancy.env, mounted at /conf).
+    A save first fetches the config with them, so a typo never replaces working settings."""
+
+    KEYS = ("API_TOKEN", "CONFIG_URL")
+
+    def __init__(self, path):
+        self.path = path
+        self.values = {}
+        try:
+            with open(path) as f:
+                for line in f:
+                    k, sep, v = line.strip().partition("=")
+                    if sep and k in self.KEYS:
+                        self.values[k] = v
+        except FileNotFoundError:
+            pass
+
+    @property
+    def complete(self):
+        return all(self.values.get(k) for k in self.KEYS)
+
+    def save(self, form):
+        """form: the /setup POST fields. Returns an error message, or None once saved."""
+        url = form.get("config_url", "").strip()
+        token = form.get("api_token", "").strip()
+        current = self.values.get("API_TOKEN", "")
+        # LAN-reachable page: once a token is set, only someone who knows it may replace it.
+        if current and not hmac.compare_digest(form.get("current_token", "").encode(), current.encode()):
+            return "現在のトークンが違います"
+        # \S only: a newline would add lines to the env file
+        if not re.fullmatch(r"https?://\S{1,2040}", url):
+            return "設定 URL は http:// または https:// で始めてください（空白なし）"
+        if not re.fullmatch(r"\S{1,512}", token):
+            return "トークンを入力してください（空白なし）"
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                json.load(resp)
+        except urllib.error.HTTPError as e:
+            return f"設定を取得できません: HTTP {e.code}" + ("（トークンが無効）" if e.code in (401, 403) else "")
+        except (OSError, ValueError) as e:
+            return f"設定を取得できません: {e}"
+        tmp = self.path + ".tmp"
+        with open(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as f:
+            f.write(f"API_TOKEN={token}\nCONFIG_URL={url}\n")
+        os.replace(tmp, self.path)
+        self.values = {"API_TOKEN": token, "CONFIG_URL": url}
+        return None
+
+    def page(self, msg="", ok=False):
+        url = html.escape(self.values.get("CONFIG_URL", ""))
+        state = "設定済み" if self.complete else "未設定（座席の検出は設定後に始まります）"
+        note = f'<p class="{"ok" if ok else "err"}">{html.escape(msg)}</p>' if msg else ""
+        current = ""
+        if self.values.get("API_TOKEN"):
+            current = ('<label>現在のトークン（変更の確認用。忘れた場合は Pi で '
+                       'conf/kmt-occupancy.env を削除してコンテナを再起動）'
+                       '<input name="current_token" type="password" required autocomplete="off"></label>')
+        refresh = '<meta http-equiv="refresh" content="15;url=/">' if ok else ""
+        return f"""<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+{refresh}<title>Pi 設定</title>
+<style>body{{font-family:sans-serif;max-width:34em;margin:20px auto;padding:0 16px;background:#fafafa}}
+label{{display:block;margin-top:14px}}input{{width:100%;padding:8px;box-sizing:border-box;font-size:1em}}
+button{{margin-top:18px;padding:8px 24px;font-size:1em}}.err{{color:#c0392b}}.ok{{color:#27ae60}}</style></head>
+<body><h1>Pi 設定</h1>
+<p>状態: {state}</p>{note}
+<form method="post" action="/setup">
+<label>設定 URL<input name="config_url" type="url" required value="{url}" placeholder="https://&lt;worker&gt;/api/config"></label>
+<label>デバイストークン（管理画面「デバイス」で発行）<input name="api_token" type="password" required autocomplete="off"></label>
+{current}
+<button>保存して再起動</button></form>
+<p>保存の前に、設定 URL へこのトークンで接続して確認します。<a href="/">稼働状況</a></p>
+</body></html>"""
+
+
+# ---------------------------------------------------------------------------
 # Dashboard HTTP Server (local occupancy display)
 # ---------------------------------------------------------------------------
 
 class DashboardServer(threading.Thread):
     """Simple HTTP server serving seat status dashboard."""
 
-    def __init__(self, port=8080, state_source=None):
+    def __init__(self, port=8080, state_source=None, settings=None, on_saved=None):
         super().__init__(daemon=True)
         self.port = port
         self._state_source = state_source
+        self._settings = settings
+        self._on_saved = on_saved
         self._server = None
         self._running = False
 
     def run(self):
         import http.server
         import socketserver
-        state_source, html = self._state_source, self._html()
+        state_source, page = self._state_source, self._html()
+        settings, on_saved = self._settings, self._on_saved
+        if settings:
+            page = page.replace("</body>", '<p style="text-align:center"><a href="/setup">設定</a></p></body>')
 
         class H(http.server.BaseHTTPRequestHandler):
+            def _page(self, body, code=200):
+                self.send_response(code)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(body.encode())
+
+            def do_POST(self):
+                if not settings or self.path != "/setup":
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+                n = int(self.headers.get("Content-Length") or 0)
+                if n > 8192:
+                    self.send_response(413)
+                    self.end_headers()
+                    return
+                form = {k: v[0] for k, v in urllib.parse.parse_qs(
+                    self.rfile.read(n).decode("utf-8", "replace"), max_num_fields=10).items()}
+                err = settings.save(form)
+                if err:
+                    self._page(settings.page(err), 400)
+                    return
+                self._page(settings.page("保存しました。再起動して新しい設定で始めます（約 15 秒）。", ok=True))
+                print("  [setup] 設定を保存しました。再起動します")
+                if on_saved:
+                    on_saved()
+
             def do_GET(self):
-                if self.path == "/api/state":
+                if settings and self.path == "/setup":
+                    self._page(settings.page())
+                elif self.path == "/api/state":
                     data = json.dumps(state_source() if state_source else {})
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(data.encode())
                 elif self.path == "/":
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/html; charset=utf-8")
-                    self.end_headers()
-                    self.wfile.write(html.encode())
+                    self._page(page)
                 else:
                     self.send_response(404)
                     self.end_headers()
@@ -564,11 +682,32 @@ def main(argv=None):
     p.add_argument("--mock", action="store_true", help="モックフレームでテスト")
     p.add_argument("--duration", type=int, default=10, help="モック秒数")
     p.add_argument("--dashboard-port", type=int, default=8080)
+    p.add_argument("--settings", help="API_TOKEN・CONFIG_URL の env ファイル（/setup で入力。Pi: /conf/kmt-occupancy.env）")
     args = p.parse_args(argv)
 
     print("=" * 50)
     print(f" テーブル稼働監視システム v{VERSION}")
     print("=" * 50)
+
+    settings = Settings(args.settings) if args.settings else None
+    # After a save: leave through KeyboardInterrupt (cameras released); Docker's restart policy
+    # starts main.py again with the new settings.
+    restart = lambda: threading.Timer(1.0, os.kill, (os.getpid(), signal.SIGINT)).start()
+    if settings:
+        os.environ.update({k: v for k, v in settings.values.items() if v})
+        if not settings.complete:
+            srv = DashboardServer(port=args.dashboard_port, settings=settings, on_saved=restart)
+            srv.start()
+            print(f"  [setup] 未設定: http://<Pi の IP>:{args.dashboard_port}/setup で設定 URL とトークンを入力してください")
+            try:
+                while True:
+                    time.sleep(3600)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                srv.stop()
+            return
+        args.config = settings.values["CONFIG_URL"]
 
     config = load_config(args.config)
     zones = config.get("zones", [])
@@ -601,7 +740,8 @@ def main(argv=None):
         detector = Detector()
 
     snap = lambda: {sid: st.to_dict() for sid, st in tracker.states.items()}
-    srv = DashboardServer(port=args.dashboard_port, state_source=snap)
+    srv = DashboardServer(port=args.dashboard_port, state_source=snap,
+                          settings=settings, on_saved=restart)
     srv.start()
 
     try:

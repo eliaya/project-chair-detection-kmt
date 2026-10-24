@@ -90,7 +90,6 @@ export function DeviceConnection({
   current?: Device
 }) {
   const { t } = useI18n()
-  const env = `API_TOKEN=${token}\nCONFIG_URL=${window.location.origin}/api/config`
   const connected = current && lastContact(current) > lastContact(issued)
   const badCameras = Object.entries(current?.health?.cameras ?? {})
     .filter(([, s]) => s !== 'ok')
@@ -99,7 +98,11 @@ export function DeviceConnection({
 
   return (
     <div className='flex flex-col gap-3'>
-      <CopyBlock text={env} />
+      {/* Entered on the Pi's own page, http://<pi>:8080/setup */}
+      <p className='text-sm font-medium'>{t('connect.configUrl')}</p>
+      <CopyBlock text={`${window.location.origin}/api/config`} />
+      <p className='text-sm font-medium'>{t('connect.token')}</p>
+      <CopyBlock text={token} />
       <div aria-live='polite' className='flex items-start gap-2 text-sm'>
         {!connected ? (
           <>

@@ -257,15 +257,17 @@ export const en = {
   'cameraStatus.not_reported': 'Not reported (restart main.py)',
   'cameraStatus.offline': 'Pi offline',
   'devices.healthDetail': 'v{version} · {ms} ms/frame · {queue} unsent',
+  'connect.configUrl': 'Config URL',
+  'connect.token': 'Device token',
   'connect.waiting': 'Waiting for the Pi to connect…',
   'connect.hint':
-    'Not connecting? Check the log on the Pi: journalctl -u kmt-occupancy -f',
+    'Not connecting? Check the log on the Pi: docker compose logs -f (in /data/docker/apps/kmt-occupancy)',
   'connect.starting': 'The Pi fetched its config and is starting.',
   'connect.online': 'Connected. The Pi is sending data.',
   'connect.cameraError': 'Connected, but a camera has a problem: {cameras}',
   'dashboard.cameraProblem': 'Camera {camera}: {status}',
   'resource.tokenDesc':
-    'This token will not be shown again. On the Pi, put these two lines in /data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env and run docker compose up -d in that directory.',
+    'This token will not be shown again. On the Pi, open http://<Pi IP address>:8080/setup and enter the config URL and token below.',
 
   'admins.desc': 'Accounts that can sign in to this admin console.',
   'admins.passwordHint':

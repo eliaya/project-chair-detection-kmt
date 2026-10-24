@@ -253,15 +253,17 @@ export const ja: Dict = {
   'cameraStatus.not_reported': '未報告（main.py を再起動）',
   'cameraStatus.offline': 'Pi オフライン',
   'devices.healthDetail': 'v{version} · 推論 {ms}ms · 未送信 {queue}件',
+  'connect.configUrl': '設定 URL',
+  'connect.token': 'デバイストークン',
   'connect.waiting': 'Pi の接続を待っています…',
   'connect.hint':
-    '接続しない場合は Pi でログを確認してください: journalctl -u kmt-occupancy -f',
+    '接続しない場合は Pi でログを確認してください: docker compose logs -f（/data/docker/apps/kmt-occupancy で実行）',
   'connect.starting': 'Pi が設定を取得しました。起動中です。',
   'connect.online': '接続しました。Pi からデータを受信しています。',
   'connect.cameraError': '接続しましたが、カメラに問題があります: {cameras}',
   'dashboard.cameraProblem': 'カメラ {camera}: {status}',
   'resource.tokenDesc':
-    'このトークンは二度と表示されません。Pi の /data/docker/apps/kmt-occupancy/conf/kmt-occupancy.env に次の2行を書き、そのディレクトリで docker compose up -d を実行してください。',
+    'このトークンは二度と表示されません。Pi の http://<Pi の IP アドレス>:8080/setup を開き、次の設定 URL とトークンを入力してください。',
 
   'admins.desc': 'この管理画面にログインできるアカウントです。',
   'admins.passwordHint':
