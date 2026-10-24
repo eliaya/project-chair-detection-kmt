@@ -534,6 +534,54 @@ class TestDashboardServer(unittest.TestCase):
             self.assertEqual(json.load(r), {"s": {"status": "occupied"}})
         srv.stop()
 
+    def test_live_page_and_stream(self):
+        import urllib.error
+        import urllib.request
+        from main import DashboardServer
+        srv = DashboardServer(port=0, cameras=["cam 1"], live_source=lambda cid: b"JPEG-" + cid.encode())
+        srv.start()
+        for _ in range(100):
+            if srv._server:
+                break
+            time.sleep(0.01)
+        base = f"http://127.0.0.1:{srv._server.server_address[1]}"
+        with urllib.request.urlopen(base + "/live", timeout=5) as r:
+            self.assertIn('src="/live/stream?cam=cam%201"', r.read().decode())
+        with urllib.request.urlopen(base + "/live/stream?cam=cam%201", timeout=5) as r:
+            self.assertTrue(r.headers["Content-Type"].startswith("multipart/x-mixed-replace"))
+            self.assertIn(b"JPEG-cam 1", r.read(80))
+        with self.assertRaises(urllib.error.HTTPError) as e:   # unknown camera
+            urllib.request.urlopen(base + "/live/stream?cam=x", timeout=5)
+        self.assertEqual(e.exception.code, 404)
+        with urllib.request.urlopen(base + "/api/state", timeout=5) as r:   # not blocked by the stream
+            self.assertEqual(json.load(r), {})
+        srv.stop()
+
+    def test_live_only_for_lan(self):
+        from main import lan_client
+        for ip in ("127.0.0.1", "192.168.1.20", "10.128.2.9", "172.17.0.1", "fd00::1"):
+            self.assertTrue(lan_client(ip), ip)
+        for ip in ("8.8.8.8", "1.1.1.1", "2001:4860::1", "bad"):
+            self.assertFalse(lan_client(ip), ip)
+
+    def test_annotate(self):
+        try:
+            import cv2
+            import numpy as np
+        except ImportError:
+            self.skipTest("numpy / OpenCV not installed")
+        from main import annotate, OccupancyTracker, LIVE_COLORS
+        zone = {"id": "z", "seats": [[{"vertices": [[100, 100], [600, 100], [600, 600], [100, 600]]}]]}
+        t = OccupancyTracker([zone], conf_frames=1)
+        t.ensure_seats()
+        t.process_frame([(7, [200, 0, 300, 700])], zone)        # lower-body point in the seat → occupied
+        jpg = annotate(np.zeros((1080, 1920, 3), np.uint8), [(7, [200, 0, 300, 700])], [zone], t.states)
+        img = cv2.imdecode(np.frombuffer(jpg, np.uint8), cv2.IMREAD_COLOR)
+        self.assertEqual(img.shape, (540, 960, 3))
+        b, g, r = (int(v) for v in img[50, 150])                # seat edge (100,100) → half scale
+        self.assertGreater(r, 150)                              # red: occupied
+        self.assertIsNone(annotate([[0, 0, 0]], [], [zone], t.states))   # mock frame
+
 
 class TestDrawZones(unittest.TestCase):
     def draw_two_tables(self):

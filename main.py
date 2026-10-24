@@ -5,6 +5,7 @@ YOLO26n (NCNN) + ByteTrack で人物検出・追跡 → 座席区域判定 → �
 import argparse
 import hmac
 import html
+import ipaddress
 import json
 import math
 import re
@@ -356,6 +357,32 @@ class OccupancyTracker:
         return results
 
 
+def annotate(frame, tracks, zones, states, max_width=960):
+    """JPEG of a processed frame for /live: seats in their status color and tracked persons
+    (white box + track id), scaled down to max_width. None for a mock (non-image) frame."""
+    import cv2
+    import numpy as np
+    if getattr(frame, "ndim", 0) != 3:
+        return None
+    scale = min(1.0, max_width / frame.shape[1])
+    img = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    for z in zones:
+        for ti, table in enumerate(z["seats"]):
+            for si, seat in enumerate(table):
+                st = states.get(OccupancyTracker._sid(z["id"], ti, si))
+                pts = (np.array(seat["vertices"]) * scale).astype(np.int32)
+                cv2.polylines(img, [pts], True, LIVE_COLORS.get(st and st.status, LIVE_COLORS[None]), 2)
+    for tid, box in tracks:
+        x, y, w, h = (int(v * scale) for v in box)
+        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 255, 255), 2)
+        cv2.putText(img, str(tid), (x + 2, max(y - 4, 14)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+    return cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 70])[1].tobytes()
+
+
+# BGR, the dashboard's colors: red occupied, green empty, orange confirming / leave_confirm
+LIVE_COLORS = {SeatState.OCCUPIED: (60, 76, 231), SeatState.EMPTY: (113, 204, 46), None: (18, 156, 243)}
+
+
 # ---------------------------------------------------------------------------
 # Cloud Sync (HTTPS POST, SQLite offline buffer)
 # ---------------------------------------------------------------------------
@@ -526,6 +553,26 @@ button{{margin-top:18px;padding:8px 24px;font-size:1em}}.err{{color:#c0392b}}.ok
 </body></html>"""
 
 
+def lan_client(ip):
+    """/live shows guests: only for private / loopback addresses (LAN), never the internet."""
+    try:
+        return ipaddress.ip_address(ip).is_private
+    except ValueError:
+        return False
+
+
+def live_page(cameras):
+    imgs = "".join(f'<h2>{html.escape(c)}</h2><img src="/live/stream?cam={urllib.parse.quote(c)}" alt="{html.escape(c)}">'
+                   for c in cameras) or "<p>カメラなし</p>"
+    return f"""<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8"><title>ライブ映像</title>
+<style>body{{font-family:sans-serif;margin:20px;background:#fafafa;text-align:center}}
+img{{max-width:100%;background:#ddd}}</style></head>
+<body><h1>ライブ映像</h1>{imgs}
+<p>座席: 赤＝着席、緑＝空席、橙＝確認中。白枠＝追跡中の人物と追跡 ID（スタッフ・通行人は除外）。約 1 秒ごとに更新。</p>
+<p><a href="/">稼働状況</a></p></body></html>"""
+
+
 # ---------------------------------------------------------------------------
 # Dashboard HTTP Server (local occupancy display)
 # ---------------------------------------------------------------------------
@@ -533,10 +580,13 @@ button{{margin-top:18px;padding:8px 24px;font-size:1em}}.err{{color:#c0392b}}.ok
 class DashboardServer(threading.Thread):
     """Simple HTTP server serving seat status dashboard."""
 
-    def __init__(self, port=8080, state_source=None, settings=None, on_saved=None):
+    def __init__(self, port=8080, state_source=None, settings=None, on_saved=None,
+                 cameras=(), live_source=None):
         super().__init__(daemon=True)
         self.port = port
         self._state_source = state_source
+        self._cameras = [str(c) for c in cameras]
+        self._live_source = live_source   # camera id -> JPEG bytes or None
         self._settings = settings
         self._on_saved = on_saved
         self._server = None
@@ -547,8 +597,11 @@ class DashboardServer(threading.Thread):
         import socketserver
         state_source, page = self._state_source, self._html()
         settings, on_saved = self._settings, self._on_saved
-        if settings:
-            page = page.replace("</body>", '<p style="text-align:center"><a href="/setup">設定</a></p></body>')
+        cameras, live_source = self._cameras, self._live_source
+        links = (['<a href="/live">ライブ映像</a>'] if live_source else []) + (
+            ['<a href="/setup">設定</a>'] if settings else [])
+        if links:
+            page = page.replace("</body>", f'<p style="text-align:center">{" ・ ".join(links)}</p></body>')
 
         class H(http.server.BaseHTTPRequestHandler):
             def _page(self, body, code=200):
@@ -578,8 +631,36 @@ class DashboardServer(threading.Thread):
                 if on_saved:
                     on_saved()
 
+            def _stream(self, cid):
+                self.send_response(200)
+                self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                try:
+                    while True:
+                        jpg = live_source(cid)
+                        if jpg:
+                            self.wfile.write(b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n"
+                                             % len(jpg) + jpg + b"\r\n")
+                        time.sleep(1)   # main.py processes about one frame per second
+                except OSError:         # the viewer closed the page
+                    pass
+
             def do_GET(self):
-                if settings and self.path == "/setup":
+                url = urllib.parse.urlsplit(self.path)
+                if url.path.startswith("/live") and live_source:
+                    if not lan_client(self.client_address[0]):
+                        self.send_response(403)
+                        self.end_headers()
+                    elif url.path == "/live":
+                        self._page(live_page(cameras))
+                    elif url.path == "/live/stream" and (
+                            cid := urllib.parse.parse_qs(url.query).get("cam", [""])[0]) in cameras:
+                        self._stream(cid)
+                    else:
+                        self.send_response(404)
+                        self.end_headers()
+                elif settings and self.path == "/setup":
                     self._page(settings.page())
                 elif self.path == "/api/state":
                     data = json.dumps(state_source() if state_source else {})
@@ -596,7 +677,9 @@ class DashboardServer(threading.Thread):
             def log_message(self, *a):
                 pass
 
-        self._server = socketserver.TCPServer(("", self.port), H)
+        # Threads: a /live stream holds its connection open.
+        self._server = socketserver.ThreadingTCPServer(("", self.port), H)
+        self._server.daemon_threads = True
         self._running = True
         print(f"  [dashboard] http://localhost:{self.port}")
         while self._running:
@@ -636,9 +719,11 @@ setTimeout(u,2000)};}u();</script>
 # ---------------------------------------------------------------------------
 
 def run(cams, zones, detector, tracker, cloud, duration_s=None, interval_s=1.0,
-        high_score=0.5, staff_aspect=2.0, staff_speed=50.0):
+        high_score=0.5, staff_aspect=2.0, staff_speed=50.0, live=None):
     """Every interval: each camera's frame → persons → its own tracker → its zones' seats.
-    cams: [(camera_id, Camera)]. duration_s=None runs until interrupted."""
+    cams: [(camera_id, Camera)]. duration_s=None runs until interrupted.
+    live: dict, gets each camera's (str id) latest (frame, tracks, zones) for the /live page."""
+    live = {} if live is None else live
     trackers = {cid: ByteTrack(high=high_score) for cid, _ in cams}   # tracks live across frames
     zones_of = {cid: [z for z in zones if z.get("camera") == cid] for cid, _ in cams}
     start = time.time()
@@ -650,6 +735,7 @@ def run(cams, zones, detector, tracker, cloud, duration_s=None, interval_s=1.0,
             frame = cam.read_frame()
             if frame is None:
                 # No fake frame: the Worker shows this camera's seats as unknown.
+                live.pop(str(cid), None)
                 continue
             t1 = time.time()
             dets = detector(frame)
@@ -659,6 +745,7 @@ def run(cams, zones, detector, tracker, cloud, duration_s=None, interval_s=1.0,
                       if not is_staff(box, bt.speed[tid], staff_aspect, staff_speed)]
             for z in zones_of[cid]:
                 cloud.submit(tracker.process_frame(tracks, z))
+            live[str(cid)] = (frame, tracks, zones_of[cid])
         cloud.heartbeat(health={
             "version": VERSION,
             "queue": cloud.queued(),
@@ -740,8 +827,12 @@ def main(argv=None):
         detector = Detector()
 
     snap = lambda: {sid: st.to_dict() for sid, st in tracker.states.items()}
+    live = {}
+    # Drawn and encoded per viewer request, so no cost while nobody watches.
+    live_jpeg = lambda cid: (got := live.get(cid)) and annotate(*got, tracker.states)
     srv = DashboardServer(port=args.dashboard_port, state_source=snap,
-                          settings=settings, on_saved=restart)
+                          settings=settings, on_saved=restart,
+                          cameras=[c for c, _ in cams], live_source=live_jpeg)
     srv.start()
 
     try:
@@ -749,7 +840,7 @@ def main(argv=None):
             duration_s=args.duration if args.mock else None,
             high_score=thresh.get("confidence", 0.5),
             staff_aspect=thresh.get("staff_aspect_ratio", 2.0),
-            staff_speed=thresh.get("staff_speed_px", 50.0))
+            staff_speed=thresh.get("staff_speed_px", 50.0), live=live)
     except KeyboardInterrupt:
         pass
     finally:

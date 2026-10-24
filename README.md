@@ -55,7 +55,7 @@ USB カメラ → Raspberry Pi（main.py） ──数値データ──▶ Cloud
 カメラなしで、模擬フレームによる動作を確認できます。
 
 ```sh
-python3 main.py --mock --duration 60    # http://localhost:8080 に座席の状態を表示
+python3 main.py --mock --duration 60    # http://localhost:8080 に座席の状態を表示（/live: 検出結果を重ねたカメラ映像。モックでは映像なし）
 ```
 
 ## 関連ドキュメント
