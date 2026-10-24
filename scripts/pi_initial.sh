@@ -125,7 +125,7 @@ Continue anyway?" || die "Cancelled"
       ;;
   esac
 
-  local source="the official apt repository, and git" app="Clone the app into ${APP_DIR} if it is not there"
+  local source="the official apt repository, and git" app="Clone the app into ${APP_DIR}, or update it there (git pull)"
   if ((OFFLINE)); then
     source="this bundle, offline" app="Copy the app and model from this bundle (asks for the directory)"
   fi
@@ -235,18 +235,27 @@ copy_bundle_app() {
   log "Copied the bundle's app into ${APP_DIR}"
 }
 
+# A re-run brings an existing checkout up to date: an old compose.yaml or main.py stays otherwise
+update_checkout() {
+  if [[ -d "$APP_DIR/.git" ]]; then
+    git -C "$APP_DIR" pull --ff-only \
+      || warn "git pull failed in ${APP_DIR}; building the app as it is"
+  fi
+  log "Using the app in ${APP_DIR}"
+}
+
 fetch_app() {
   if ((OFFLINE)); then
     copy_bundle_app
     return 0
   fi
   if [[ -f "$APP_DIR/compose.yaml" ]]; then
-    log "Using the app in ${APP_DIR}"
+    update_checkout
     return 0
   fi
   APP_DIR="$(ui_input "Directory to clone the app into:" "$APP_DIR")"
   if [[ -f "$APP_DIR/compose.yaml" ]]; then
-    log "Using the app in ${APP_DIR}"
+    update_checkout
     return 0
   fi
   [[ ! -e "$APP_DIR" || -z "$(ls -A "$APP_DIR")" ]] \
