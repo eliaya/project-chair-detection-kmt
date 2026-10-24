@@ -56,12 +56,6 @@ export const resources = {
         label: 'field.name',
         placeholder: 'devices.namePlaceholder',
       },
-      {
-        name: 'lan_url',
-        label: 'field.lanUrl',
-        placeholder: 'http://192.168.1.20:8080',
-        description: 'devices.lanUrlHint',
-      },
     ],
     createSchema: deviceSchema,
     columns: [
@@ -159,7 +153,6 @@ export const resources = {
       },
     ],
     refetchInterval: 5000,
-    liveView: true,
   },
   zones: {
     key: 'zones',
