@@ -1,5 +1,15 @@
 # 変更履歴
 
+## v1.6.0 (2026-10-24)
+
+- 管理画面「ゾーン」：カメラ画像の上で座席の角をクリックして多角形を描き、そのまま保存（`draw_zones.py` の JSON を貼り付ける手順は不要）
+- Pi の main.py を Docker コンテナで実行（`Dockerfile`、`compose.yaml`）。`scripts/pi_initial.sh` で Docker CE・Compose plugin の導入、アプリの取得、YOLO26n NCNN モデルの書き出し、イメージのビルドと起動まで行う。単体で Pi にコピーして実行でき、既定のインストール先は `/data/docker/apps/kmt-occupancy`
+- オフライン導入パッケージ：`python3 scripts/build_pi_bundle.py` で `dist/kmt-pi-bundle/` を作成（.deb・ベースイメージ・wheel・モデル）。手順は `deploy/pi-bundle/CHECKLIST.md`
+- カメラが接続されていなくてもコンテナは起動し、後から接続したカメラ（`/dev/video*` のどの番号でも）を自動で読み始める
+- `/etc/kmt-occupancy.env` の `CONFIG_URL` が空のときは、Traceback ではなく設定を促すメッセージを出して終了
+- `scripts/deploy-prod-append.sh`（既存の D1 に未適用のマイグレーションだけ適用してデプロイ）、`scripts/deploy-prod-fresh.sh`（D1 の全テーブルを削除してからデプロイ）
+- README に概要・仕組み・ファイル一覧・画面・API を追加
+
 ## v1.5.0 (2026-10-21)
 
 - 外部連携 API（History）：座席の利用中・空席の期間とテーブルが空いていた期間を、Pi からの報告時に D1 の `history` に記録
